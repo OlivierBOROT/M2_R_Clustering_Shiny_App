@@ -1,0 +1,22 @@
+Package: M2RClust
+Title: Variable Clustering tool with a Shiny interface
+Version: 0.0.0.9000
+Authors@R: c(
+    person(given = "Léo-Paul", family = "Knoepffler", email = "l.knoepffler@free.fr", role = c("aut", "cre")),
+    person(given = "Olivier", family = "Borot", email = "olivier@example.com", role = "aut"),
+    person(given = "Perrine", family = "Ibouroi", email = "perrine@example.com", role = "aut")
+    )
+Description: Clustering package developed as part of a group project for the R programming course (Master 2 SISE), Université Lumière Lyon 2.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Imports:
+    stats,
+    shiny
+Suggests:
+    testthat (>= 3.0.0),
+    knitr,
+    rmarkdown
+Config/testthat/edition: 3
