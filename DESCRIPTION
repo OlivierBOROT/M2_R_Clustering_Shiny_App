@@ -3,7 +3,7 @@ Title: Variable Clustering tool with a Shiny interface
 Version: 0.0.0.9000
 Authors@R: c(
     person(given = "Léo-Paul", family = "Knoepffler", email = "l.knoepffler@free.fr", role = c("aut", "cre")),
-    person(given = "Olivier", family = "Borot", email = "olivier@example.com", role = "aut"),
+    person(given = "Olivier", family = "Borot", email = "olivier.dominique.borot@gmail.com", role = "aut"),
     person(given = "Perrine", family = "Ibouroi", email = "perrine.ibouroi@hotmail.fr", role = "aut")
     )
 Description: Clustering package developed as part of a group project for the R programming course (Master 2 SISE), Université Lumière Lyon 2.
