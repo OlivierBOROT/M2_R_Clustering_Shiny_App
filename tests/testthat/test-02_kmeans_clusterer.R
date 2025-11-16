@@ -419,7 +419,6 @@ test_that("print method shows model info", {
   clusterer$fit()
   
   expect_output(print(clusterer), "Variable Clusterer")
-  expect_output(print(clusterer), "ClustOfVar-like")
   expect_output(print(clusterer), "3 clusters")
 })
 

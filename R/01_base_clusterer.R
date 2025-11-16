@@ -1,7 +1,6 @@
 #' @title Base Clustering class for Clustering Algorithms
 #' @description R6 abstract class that serves as a base for all clustering algorithm implementations.
 #' it defines common properties and methods that all clustering algorithms should have.
-#' @importFrom R6 R6Class
 #' @export
 
 BaseClusterer <- R6::R6Class(

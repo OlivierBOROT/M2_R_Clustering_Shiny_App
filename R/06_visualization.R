@@ -2,10 +2,6 @@
 #' 
 #' This script contains visualization functions for the clustering results.
 #' @name visualization
-#' @importFrom grDevices colorRampPalette rainbow
-#' @importFrom graphics abline axis barplot grid image legend lines matplot mtext par plot.new points text
-#' @importFrom stats cor
-#' @importFrom utils head
 NULL
 
 

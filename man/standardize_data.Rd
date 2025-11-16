@@ -2,7 +2,7 @@
 % Please edit documentation in R/00_utils.R
 \name{standardize_data}
 \alias{standardize_data}
-\title{Standardize data (center and scale)}
+\title{Utility Functions for Clustering}
 \usage{
 standardize_data(data, center = TRUE, scale = TRUE)
 }
@@ -17,5 +17,11 @@ standardize_data(data, center = TRUE, scale = TRUE)
 A list containing the scaled data, the centers, and the scales
 }
 \description{
-Standardize data (center and scale)
+This script contains utility functions used by all the implemented clustering algorithms.
 }
+\keyword{(center}
+\keyword{Standardize}
+\keyword{and}
+\keyword{data}
+\keyword{internal}
+\keyword{scale)}

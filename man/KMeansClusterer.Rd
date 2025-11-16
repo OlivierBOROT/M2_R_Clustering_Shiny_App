@@ -4,9 +4,9 @@
 \alias{KMeansClusterer}
 \title{Variable Clustering Based on Within-Cluster Homogeneity}
 \description{
-R6 class implementing variable clustering using a ClustOfVar-like approach.
+R6 class implementing variable clustering.
 Variables are clustered to maximize within-cluster homogeneity, measured by the proportion
-of variance explained by the first principal component of each cluster.
+of variance explained by the first principal component of each cluster given by the PCA within-cluster.
 }
 \section{Super class}{
 \code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{KMeansClusterer}

@@ -1,7 +1,7 @@
 #' @title Variable Clustering Based on Within-Cluster Homogeneity
-#' @description R6 class implementing variable clustering using a ClustOfVar-like approach.
+#' @description R6 class implementing variable clustering.
 #' Variables are clustered to maximize within-cluster homogeneity, measured by the proportion
-#' of variance explained by the first principal component of each cluster.
+#' of variance explained by the first principal component of each cluster given by the PCA within-cluster.
 #' @export
 KMeansClusterer <-  R6::R6Class("KMeansClusterer",
   inherit = BaseClusterer,
@@ -760,7 +760,7 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
         return(invisible(self))
       }
       
-      cat("Variable Clusterer (ClustOfVar-like approach)\n")
+      cat("Variable Clusterer \n")
       cat(sprintf("  %d clusters (sizes: %s)\n",
                   self$n_clusters,
                   paste(table(self$clusters), collapse = ", ")))
@@ -796,7 +796,7 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       }
       
       cat("=================================================\n")
-      cat("Variable Clustering - ClustOfVar-like Approach\n")
+      cat("Variable Clustering \n")
       cat("=================================================\n\n")
       
       cat("Configuration:\n")

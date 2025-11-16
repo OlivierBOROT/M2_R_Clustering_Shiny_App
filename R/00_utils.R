@@ -1,11 +1,6 @@
 #' @title Utility Functions for Clustering
 #' @description This script contains utility functions used by all the implemented clustering algorithms.
 #' @keywords internal
-#' @importFrom stats cor dist
-#' @importFrom utils head
-#' @importFrom grDevices colorRampPalette rainbow
-#' @importFrom graphics abline axis barplot grid image legend lines matplot mtext par plot.new points text
-NULL
 
 #' Standardize data (center and scale)
 #' 
