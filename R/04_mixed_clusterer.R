@@ -46,7 +46,7 @@ MixedClusterer <- R6::R6Class(
     summary = function() {
       # summary method specific to Mixed data clustering
       invisible(self)
-    },
+    }
   ),
   private = list(
     # private methods and fields specific to Mixed data clustering can be added here
