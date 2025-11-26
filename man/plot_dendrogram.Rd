@@ -2,17 +2,29 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_dendrogram}
 \alias{plot_dendrogram}
-\title{Plot dendrogram for hierarchical clustering}
+\title{Plot Dendrogram for Hierarchical Clustering}
 \usage{
 plot_dendrogram(clusterer, main = "Dendrogram", ...)
 }
 \arguments{
-\item{clusterer}{A fitted hierarchical clustering object}
+\item{clusterer}{A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}).}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title (default: \code{"Dendrogram"}).}
 
-\item{...}{Additional parameters passed to plot()}
+\item{...}{Additional parameters passed to \code{plot()}.}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot dendrogram for hierarchical clustering
+Creates a dendrogram visualization for hierarchical clustering methods.
+}
+\details{
+This function is currently a placeholder and will be implemented according to
+the structure of \code{MCA_HClusterer}. It requires hierarchical clustering
+results stored in the clusterer object.
+}
+\seealso{
+\code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
 }

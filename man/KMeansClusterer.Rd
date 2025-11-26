@@ -2,11 +2,68 @@
 % Please edit documentation in R/02_kmeans_clusterer.R
 \name{KMeansClusterer}
 \alias{KMeansClusterer}
-\title{Variable Clustering Based on Within-Cluster Homogeneity}
+\title{Variable Clustering Based on Within-Cluster Homogeneity (Mixed Data)}
 \description{
-R6 class implementing variable clustering.
-Variables are clustered to maximize within-cluster homogeneity, measured by the proportion
-of variance explained by the first principal component of each cluster given by the PCA within-cluster.
+R6 class implementing variable clustering by maximizing
+within-cluster homogeneity for quantitative, qualitative, and mixed data.
+}
+\details{
+This algorithm clusters variables (not observations) into a pre-specified
+number of clusters. It supports numeric, factor, and mixed data types.
+
+The homogeneity of a cluster is measured by the proportion of variance
+explained by its first latent component. The \code{fit} method
+iteratively reassigns variables to the cluster with whose center (latent component)
+it has the highest association (R² for quantitative, η² for qualitative).
+
+Multiple initialization strategies are supported: "homogeneity++"
+(similar to k-means++), "correlation" (hierarchical clustering), or
+"random". The algorithm performs multiple runs with different
+initializations and keeps the best solution.
+}
+\examples{
+\dontrun{
+# 1. Create sample data (10 variables, 100 observations)
+set.seed(123)
+my_data <- as.data.frame(matrix(rnorm(1000), ncol = 10))
+colnames(my_data) <- paste0("Var", 1:10)
+
+# 2. Initialize the clusterer
+clusterer <- KMeansClusterer$new(
+  data = my_data,
+  n_clusters = 3,
+  standardize = TRUE,
+  seed = 42
+)
+
+# 3. Fit the model
+clusterer$fit()
+
+# 4. Examine results
+clusterer$print()
+clusterer$summary()
+results <- clusterer$get_results()
+print(results)
+
+# 5. Predict on new variables
+supp_data <- as.data.frame(matrix(rnorm(200), ncol = 2))
+colnames(supp_data) <- c("Supp1", "Supp2")
+predictions <- clusterer$predict(new_data = supp_data)
+print(predictions)
+
+# 6. Visualize
+plot_clustering_2d(clusterer)
+}
+
+}
+\seealso{
+Base class: \code{\link{BaseClusterer}}
+
+K selection methods: \code{\link{elbow_method}},
+\code{\link{silhouette_method}}, \code{\link{calinski_harabasz_method}}
+
+Visualization: \code{\link{plot_clustering_2d}},
+\code{\link{plot_cluster_quality}}
 }
 \section{Super class}{
 \code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{KMeansClusterer}
@@ -30,6 +87,7 @@ of variance explained by the first principal component of each cluster given by 
 \item \href{#method-KMeansClusterer-get_centers}{\code{KMeansClusterer$get_centers()}}
 \item \href{#method-KMeansClusterer-get_plot_data}{\code{KMeansClusterer$get_plot_data()}}
 \item \href{#method-KMeansClusterer-get_plot_data_predict}{\code{KMeansClusterer$get_plot_data_predict()}}
+\item \href{#method-KMeansClusterer-prepare_plot_predict}{\code{KMeansClusterer$prepare_plot_predict()}}
 \item \href{#method-KMeansClusterer-plot_fit}{\code{KMeansClusterer$plot_fit()}}
 \item \href{#method-KMeansClusterer-plot_predict}{\code{KMeansClusterer$plot_predict()}}
 \item \href{#method-KMeansClusterer-print}{\code{KMeansClusterer$print()}}
@@ -246,7 +304,7 @@ Get global PCA object (for visualization).
 }
 
 \subsection{Returns}{
-PCA object from prcomp.
+PCA object from prcomp or PCAmix.
 }
 }
 \if{html}{\out{<hr>}}
@@ -259,7 +317,7 @@ Get PCA loadings for visualization (global PCA).
 }
 
 \subsection{Returns}{
-Data frame of loadings.
+Data frame of loadings (for prcomp) or correlations (for PCAmix).
 }
 }
 \if{html}{\out{<hr>}}
@@ -280,12 +338,13 @@ Matrix of cluster centers (k rows x 2 columns for PC1 and PC2).
 \if{latex}{\out{\hypertarget{method-KMeansClusterer-get_plot_data}{}}}
 \subsection{Method \code{get_plot_data()}}{
 Get plot data for fitted model (internal use by visualization functions).
+Uses lazy loading: computes global PCA only when first requested.
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{KMeansClusterer$get_plot_data()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-List with coords, colors, pca.
+List with coords, colors, pca, centers (geometric barycenters).
 }
 }
 \if{html}{\out{<hr>}}
@@ -293,12 +352,44 @@ List with coords, colors, pca.
 \if{latex}{\out{\hypertarget{method-KMeansClusterer-get_plot_data_predict}{}}}
 \subsection{Method \code{get_plot_data_predict()}}{
 Get plot data for predictions (internal use by visualization functions).
+Computes coords_predict on demand if not already available.
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{KMeansClusterer$get_plot_data_predict()}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{KMeansClusterer$get_plot_data_predict(new_data = NULL)}\if{html}{\out{</div>}}
 }
 
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{New data (optional, only needed if coords_predict not computed yet).}
+}
+\if{html}{\out{</div>}}
+}
 \subsection{Returns}{
-List with coords, colors, pca.
+List with coords, colors, pca, centers.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-KMeansClusterer-prepare_plot_predict"></a>}}
+\if{latex}{\out{\hypertarget{method-KMeansClusterer-prepare_plot_predict}{}}}
+\subsection{Method \code{prepare_plot_predict()}}{
+Prepare plot coordinates for predicted variables (supplementary).
+This method computes visualization coordinates for new variables.
+Call this after predict() if you want to visualize predictions.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{KMeansClusterer$prepare_plot_predict(new_data, pred_result = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{New data frame with same observations as training data.}
+
+\item{\code{pred_result}}{Optional prediction result (from predict()). If NULL, will call predict().}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Self (invisibly).
 }
 }
 \if{html}{\out{<hr>}}

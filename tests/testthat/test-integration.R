@@ -99,8 +99,7 @@ test_that("K selection workflow", {
   # Check all methods ran
   expect_true("elbow" %in% names(results))
   expect_true("silhouette" %in% names(results))
-  expect_true("calinski_harabasz" %in% names(results))
-  expect_true("davies_bouldin" %in% names(results))
+  expect_true("homogeneity" %in% names(results))
   expect_true("consensus_k" %in% names(results))
   
   # Consensus should be in range

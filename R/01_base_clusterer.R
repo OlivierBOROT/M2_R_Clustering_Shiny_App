@@ -1,6 +1,43 @@
-#' @title Base Clustering class for Clustering Algorithms
-#' @description R6 abstract class that serves as a base for all clustering algorithm implementations.
-#' it defines common properties and methods that all clustering algorithms should have.
+#' @title Base Clustering Class for Clustering Algorithms
+#' 
+#' @description 
+#' R6 abstract class that serves as a base for all clustering algorithm implementations.
+#' It defines common properties and methods that all clustering algorithms should have.
+#' 
+#' @details
+#' This class is not intended to be instantiated directly. Instead, use one of the
+#' derived classes such as \code{\link{KMeansClusterer}}, \code{MCA_HClusterer}, or
+#' \code{MixedClusterer}.
+#' 
+#' All derived classes inherit:
+#' \itemize{
+#'   \item Data validation and standardization capabilities
+#'   \item Common interface: \code{initialize()}, \code{fit()}, \code{predict()}
+#'   \item Cluster assignment and visualization support
+#'   \item Summary and print methods
+#' }
+#' 
+#' Subclasses must implement:
+#' \itemize{
+#'   \item \code{fit()}: Algorithm-specific fitting logic
+#'   \item \code{predict()}: Assignment of new data to clusters
+#'   \item \code{print()} and \code{summary()}: Display methods
+#' }
+#' 
+#' @seealso
+#' \code{\link{KMeansClusterer}} for variable clustering via homogeneity maximization.
+#' 
+#' @examples
+#' \dontrun{
+#' # Do not instantiate BaseClusterer directly
+#' # Use a derived class instead:
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' print(clusterer)
+#' }
+#' 
+#' @importFrom R6 R6Class
 #' @export
 
 BaseClusterer <- R6::R6Class(

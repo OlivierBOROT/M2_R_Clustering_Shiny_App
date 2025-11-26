@@ -99,15 +99,15 @@ test_that("KMeansClusterer accepts valid init_methods", {
   )
 })
 
-test_that("KMeansClusterer validates numeric data", {
-  data <- data.frame(
-    x = c("a", "b", "c"),
-    y = c("d", "e", "f")
-  )
+test_that("KMeansClusterer validates supported data types", {
+  # Should accept numeric and factor (character auto-converted)
+  # Should reject unsupported types like lists
+  data_list <- data.frame(x = 1:10)
+  data_list$y <- I(lapply(1:10, function(x) c(x, x+1))) # Column with lists
   
   expect_error(
-    KMeansClusterer$new(data = data, n_clusters = 2),
-    "numeric"
+    KMeansClusterer$new(data = data_list, n_clusters = 2),
+    "unsupported type"
   )
 })
 
@@ -474,4 +474,202 @@ test_that("all clusters have at least one variable", {
   
   expect_equal(length(cluster_sizes), 3)
   expect_true(all(cluster_sizes >= 1))
+})
+
+# ============================================================================
+# Tests for mixed data (quantitative + qualitative)
+# ============================================================================
+
+test_that("KMeansClusterer accepts pure quantitative data (mtcars)", {
+  data(mtcars)
+  
+  clusterer <- KMeansClusterer$new(
+    data = mtcars,
+    n_clusters = 3,
+    standardize = TRUE,
+    seed = 42
+  )
+  
+  expect_no_error(clusterer$fit())
+  expect_true(clusterer$fitted)
+  expect_equal(length(clusterer$clusters), ncol(mtcars))
+  expect_true(all(clusterer$clusters %in% 1:3))
+})
+
+test_that("KMeansClusterer accepts pure qualitative data", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_quali <- data.frame(
+    Color = factor(sample(c("Red", "Green", "Blue"), 32, replace = TRUE)),
+    Size = factor(sample(c("Small", "Medium", "Large"), 32, replace = TRUE)),
+    Shape = factor(sample(c("Circle", "Square", "Triangle"), 32, replace = TRUE)),
+    Texture = factor(sample(c("Smooth", "Rough"), 32, replace = TRUE))
+  )
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_quali,
+    n_clusters = 2,
+    seed = 42
+  )
+  
+  expect_no_error(clusterer$fit())
+  expect_true(clusterer$fitted)
+  expect_equal(length(clusterer$clusters), ncol(data_quali))
+})
+
+test_that("KMeansClusterer accepts mixed data (quantitative + qualitative)", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_mixed <- mtcars
+  data_mixed$gear <- as.factor(data_mixed$gear)
+  data_mixed$carb <- as.factor(data_mixed$carb)
+  data_mixed$am <- as.factor(data_mixed$am)
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_mixed,
+    n_clusters = 3,
+    standardize = TRUE,
+    seed = 42
+  )
+  
+  expect_no_error(clusterer$fit())
+  expect_true(clusterer$fitted)
+  expect_equal(length(clusterer$clusters), ncol(data_mixed))
+  
+  # Check homogeneity is valid
+  expect_true(clusterer$get_homogeneity() > 0)
+  expect_true(clusterer$get_homogeneity() <= 1)
+})
+
+test_that("correlation initialization works with mixed data", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_mixed <- mtcars[, 1:6]
+  data_mixed$gear <- as.factor(mtcars$gear)
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_mixed,
+    n_clusters = 2,
+    standardize = TRUE,
+    seed = 42,
+    init_method = "correlation"
+  )
+  
+  expect_no_error(clusterer$fit())
+  expect_true(clusterer$fitted)
+})
+
+test_that("predict works with mixed supplementary variables", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_mixed <- mtcars
+  data_mixed$am <- as.factor(data_mixed$am)
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_mixed,
+    n_clusters = 3,
+    standardize = TRUE,
+    seed = 42
+  )
+  clusterer$fit()
+  
+  # New mixed variables
+  new_vars <- data.frame(
+    new_quant = mtcars$hp * 2,
+    new_qual = factor(sample(c("A", "B", "C"), 32, replace = TRUE))
+  )
+  
+  expect_no_error(predictions <- clusterer$predict(new_vars))
+  expect_equal(nrow(predictions), 2)
+  expect_true(all(predictions$cluster %in% 1:3))
+})
+
+test_that("validation rejects missing values", {
+  data_with_na <- mtcars
+  data_with_na$mpg[1] <- NA
+  
+  expect_error(
+    KMeansClusterer$new(data_with_na, n_clusters = 2),
+    "missing values"
+  )
+})
+
+test_that("validation converts character to factor", {
+  data_char <- data.frame(
+    x = rnorm(20),
+    y = sample(c("A", "B", "C"), 20, replace = TRUE),  # character
+    z = rnorm(20),
+    stringsAsFactors = FALSE
+  )
+  
+  clusterer <- KMeansClusterer$new(data_char, n_clusters = 2)
+  
+  # Check that y was converted to factor
+  expect_true(is.factor(clusterer$data$y))
+})
+
+test_that("homogeneity calculation via PCAmix is correct", {
+  skip_if_not_installed("PCAmixdata")
+  
+  # Dataset with clear structure
+  set.seed(42)
+  data_struct <- data.frame(
+    v1 = rnorm(50),
+    v2 = rnorm(50),
+    v3 = rnorm(50) + 0.8 * rnorm(50),
+    v4 = rnorm(50) + 0.8 * rnorm(50)
+  )
+  data_struct$v3 <- data_struct$v3 + 0.9 * data_struct$v1
+  data_struct$v4 <- data_struct$v4 + 0.9 * data_struct$v1
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_struct,
+    n_clusters = 2,
+    standardize = TRUE,
+    seed = 42
+  )
+  clusterer$fit()
+  
+  # Homogeneity should be relatively high
+  expect_true(clusterer$get_homogeneity() > 0.3)
+})
+
+test_that("mixed distance (correlation init) computes Cramer's V", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_quali <- data.frame(
+    v1 = factor(sample(c("A", "B"), 30, replace = TRUE)),
+    v2 = factor(sample(c("X", "Y", "Z"), 30, replace = TRUE)),
+    v3 = factor(sample(c("1", "2"), 30, replace = TRUE))
+  )
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_quali,
+    n_clusters = 2,
+    init_method = "correlation",
+    seed = 42
+  )
+  
+  # Should not crash with qualitative variables
+  expect_no_error(clusterer$fit())
+})
+
+test_that("visualization coordinates include quantitative and qualitative", {
+  skip_if_not_installed("PCAmixdata")
+  
+  data_mixed <- mtcars[, 1:6]
+  data_mixed$gear <- as.factor(mtcars$gear)
+  data_mixed$am <- as.factor(mtcars$am)
+  
+  clusterer <- KMeansClusterer$new(
+    data = data_mixed,
+    n_clusters = 2,
+    seed = 42
+  )
+  clusterer$fit()
+  
+  coords <- clusterer$get_plot_data()$coords
+  
+  expect_true(nrow(coords) == ncol(data_mixed))
+  expect_true(all(c("PC1", "PC2", "variable", "cluster") %in% names(coords)))
 })

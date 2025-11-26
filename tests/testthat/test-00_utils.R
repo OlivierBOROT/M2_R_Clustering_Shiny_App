@@ -1,4 +1,7 @@
-# Tests for utility functions (00_utils.R)
+# Tests for low-level utility functions (00_utils.R)
+# 
+# This file tests mathematical and data manipulation utilities.
+# For cluster validation and K selection methods, see test-05_cluster_validator.R
 
 # Helper function to create test data
 create_test_data <- function(n = 100, p = 5, seed = 123) {
@@ -128,199 +131,71 @@ test_that("euclidean_distance errors on dimension mismatch", {
 })
 
 # ============================================================================
-# Tests for K selection methods
+# Tests for get_correlation_distance_matrix (ClustOfVar approach)
 # ============================================================================
 
-test_that("elbow_method runs without errors", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  # Should run without error
-  expect_no_error({
-    result <- elbow_method(
-      KMeansClusterer,
-      data,
-      k_range = 2:4,
-      plot = FALSE,
-      standardize = TRUE,
-      max_iter = 20
-    )
-  })
-})
-
-test_that("elbow_method returns correct structure", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  result <- elbow_method(
-    KMeansClusterer,
-    data,
-    k_range = 2:4,
-    plot = FALSE,
-    max_iter = 20
+test_that("get_correlation_distance_matrix produces valid distance matrix", {
+  # Create simple test data
+  data <- data.frame(
+    var1 = c(1, 2, 3, 4, 5),
+    var2 = c(2, 4, 6, 8, 10),  # Perfectly correlated with var1
+    var3 = c(5, 4, 3, 2, 1)    # Negatively correlated
   )
   
-  # Check structure
-  expect_type(result, "list")
-  expect_named(result, c("k_values", "inertias", "suggested_k", "distances"))
-  expect_equal(length(result$inertias), 3)
-  expect_true(result$suggested_k %in% 2:4)
+  # Calculate distance matrix
+  dist_mat <- get_correlation_distance_matrix(data)
+  
+  # Tests
+  expect_s3_class(dist_mat, "dist")
+  expect_equal(attr(dist_mat, "Size"), 3)
+  
+  # Distance between perfectly correlated variables should be ~0
+  dist_values <- as.matrix(dist_mat)
+  expect_lt(dist_values[1, 2], 0.01)
+  
+  # Distance should be positive
+  expect_true(all(dist_values >= 0))
+  
+  # Distance should be symmetric
+  expect_equal(dist_values[1, 2], dist_values[2, 1])
 })
 
-test_that("elbow_method errors on invalid k_range", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  expect_error(
-    elbow_method(KMeansClusterer, data, k_range = 2, plot = FALSE),
-    "at least 2 values"
-  )
-})
-
-test_that("silhouette_method runs without errors", {
-  skip_if_not_installed("R6")
-  skip_if_not_installed("cluster")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  expect_no_error({
-    result <- silhouette_method(
-      KMeansClusterer,
-      data,
-      k_range = 2:4,
-      plot = FALSE,
-      max_iter = 20
-    )
-  })
-})
-
-test_that("silhouette_method returns correct structure", {
-  skip_if_not_installed("R6")
-  skip_if_not_installed("cluster")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  result <- silhouette_method(
-    KMeansClusterer,
-    data,
-    k_range = 2:4,
-    plot = FALSE,
-    max_iter = 20
+test_that("get_correlation_distance_matrix is Euclidean", {
+  # Test triangle inequality (Euclidean property)
+  data <- data.frame(
+    var1 = rnorm(50),
+    var2 = rnorm(50),
+    var3 = rnorm(50)
   )
   
-  expect_type(result, "list")
-  expect_named(result, c("k_values", "silhouette_scores", "suggested_k"))
-  expect_equal(length(result$silhouette_scores), 3)
-  expect_true(result$suggested_k %in% 2:4)
+  dist_mat <- as.matrix(get_correlation_distance_matrix(data))
+  
+  # Triangle inequality: d(i,j) <= d(i,k) + d(k,j)
+  d12 <- dist_mat[1, 2]
+  d13 <- dist_mat[1, 3]
+  d23 <- dist_mat[2, 3]
+  
+  expect_lte(d12, d13 + d23 + 1e-10)  # Small tolerance for numerical errors
+  expect_lte(d13, d12 + d23 + 1e-10)
+  expect_lte(d23, d12 + d13 + 1e-10)
 })
 
-test_that("calinski_harabasz_method runs without errors", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  expect_no_error({
-    result <- calinski_harabasz_method(
-      KMeansClusterer,
-      data,
-      k_range = 2:4,
-      plot = FALSE,
-      max_iter = 20
-    )
-  })
-})
-
-test_that("calinski_harabasz_method returns correct structure", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  result <- calinski_harabasz_method(
-    KMeansClusterer,
-    data,
-    k_range = 2:4,
-    plot = FALSE,
-    max_iter = 20
+test_that("Correlation distance equals sqrt(2*(1-cor))", {
+  # Manual verification
+  data <- data.frame(
+    var1 = 1:10,
+    var2 = 2:11,
+    var3 = 10:1
   )
   
-  expect_type(result, "list")
-  expect_named(result, c("k_values", "ch_scores", "suggested_k"))
-  expect_equal(length(result$ch_scores), 3)
-  expect_true(result$suggested_k %in% 2:4)
-})
-
-test_that("davies_bouldin_method runs without errors", {
-  skip_if_not_installed("R6")
+  # Calculate using function
+  dist_mat <- as.matrix(get_correlation_distance_matrix(data))
   
-  data <- create_test_data(n = 100, p = 5)
+  # Calculate manually
+  scaled <- scale(data, center = TRUE, scale = TRUE)
+  cor_mat <- cor(scaled)
+  expected_dist <- sqrt(2 * (1 - cor_mat))
   
-  expect_no_error({
-    result <- davies_bouldin_method(
-      KMeansClusterer,
-      data,
-      k_range = 2:4,
-      plot = FALSE,
-      max_iter = 20
-    )
-  })
-})
-
-test_that("davies_bouldin_method returns correct structure", {
-  skip_if_not_installed("R6")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  result <- davies_bouldin_method(
-    KMeansClusterer,
-    data,
-    k_range = 2:4,
-    plot = FALSE,
-    max_iter = 20
-  )
-  
-  expect_type(result, "list")
-  expect_named(result, c("k_values", "db_scores", "suggested_k"))
-  expect_equal(length(result$db_scores), 3)
-  expect_true(result$suggested_k %in% 2:4)
-})
-
-test_that("compare_k_selection_methods runs without errors", {
-  skip_if_not_installed("R6")
-  skip_if_not_installed("cluster")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  expect_no_error({
-    result <- compare_k_selection_methods(
-      KMeansClusterer,
-      data,
-      k_range = 2:4,
-      plot = FALSE,
-      max_iter = 20
-    )
-  })
-})
-
-test_that("compare_k_selection_methods returns consensus", {
-  skip_if_not_installed("R6")
-  skip_if_not_installed("cluster")
-  
-  data <- create_test_data(n = 100, p = 5)
-  
-  result <- compare_k_selection_methods(
-    KMeansClusterer,
-    data,
-    k_range = 2:4,
-    plot = FALSE,
-    max_iter = 20
-  )
-  
-  expect_type(result, "list")
-  expect_true("consensus_k" %in% names(result))
-  expect_true("all_suggestions" %in% names(result))
-  expect_equal(length(result$all_suggestions), 4)  # 4 methods
-  expect_true(result$consensus_k %in% 2:4)
+  # Should match
+  expect_equal(dist_mat, expected_dist, tolerance = 1e-10)
 })

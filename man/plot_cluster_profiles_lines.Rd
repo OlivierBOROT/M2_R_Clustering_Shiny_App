@@ -2,11 +2,11 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_cluster_profiles_lines}
 \alias{plot_cluster_profiles_lines}
-\title{Fallback line plot for cluster profiles}
+\title{Fallback line plot for cluster strength (correlation with PC1)}
 \usage{
 plot_cluster_profiles_lines(clusterer, main, standardize)
 }
 \description{
-Fallback line plot for cluster profiles
+Fallback line plot for cluster strength (correlation with PC1)
 }
 \keyword{internal}

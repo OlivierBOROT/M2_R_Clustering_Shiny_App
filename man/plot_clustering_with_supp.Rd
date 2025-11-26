@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_clustering_with_supp}
 \alias{plot_clustering_with_supp}
-\title{Plot clustering results with supplementary variables}
+\title{Plot Clustering Results wit  h Supplementary Variables}
 \usage{
 plot_clustering_with_supp(
   clusterer,
@@ -12,14 +12,43 @@ plot_clustering_with_supp(
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object with prediction made}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}, with predictions already made.}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title. If \code{NULL} (default),
+a default title is used.}
 
-\item{show_centers}{Logical, whether to show cluster centers}
+\item{show_centers}{Logical. Whether to display cluster centers (default: \code{TRUE}).}
 
-\item{show_labels}{Logical, whether to show variable labels}
+\item{show_labels}{Logical. Whether to show variable names as labels (default: \code{TRUE}).}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot clustering results with supplementary variables
+Displays clustering results distinguishing between active variables (used for
+clustering) and supplementary variables (projected after clustering).
+}
+\details{
+This function creates a scatter plot in 2D PCA space where active variables
+(circles) and supplementary variables (triangles) are distinguished by shape.
+All variables are colored by their cluster assignment.
+
+Requires that \code{predict()} has been called on the clusterer object first.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+supp_data <- data.frame(matrix(rnorm(200), ncol = 2))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+clusterer$predict(supp_data)
+plot_clustering_with_supp(clusterer)
+}
+
+}
+\seealso{
+\code{\link{plot_clustering_2d}} for plotting without supplementary variables.
+\code{\link{KMeansClusterer}} for creating clustering objects.
 }

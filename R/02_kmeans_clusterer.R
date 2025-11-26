@@ -1,20 +1,81 @@
-#' @title Variable Clustering Based on Within-Cluster Homogeneity
-#' @description R6 class implementing variable clustering.
-#' Variables are clustered to maximize within-cluster homogeneity, measured by the proportion
-#' of variance explained by the first principal component of each cluster given by the PCA within-cluster.
+#' @title Variable Clustering Based on Within-Cluster Homogeneity (Mixed Data)
+#' @description R6 class implementing variable clustering by maximizing
+#'   within-cluster homogeneity for quantitative, qualitative, and mixed data.
+#'
+#' @details
+#' This algorithm clusters variables (not observations) into a pre-specified
+#' number of clusters. It supports numeric, factor, and mixed data types.
+#'
+#' The homogeneity of a cluster is measured by the proportion of variance
+#' explained by its first latent component. The \code{fit} method
+#' iteratively reassigns variables to the cluster with whose center (latent component)
+#' it has the highest association (R² for quantitative, η² for qualitative).
+#'
+#' Multiple initialization strategies are supported: "homogeneity++"
+#' (similar to k-means++), "correlation" (hierarchical clustering), or
+#' "random". The algorithm performs multiple runs with different
+#' initializations and keeps the best solution.
+#'
+#' @examples
+#' \dontrun{
+#' # 1. Create sample data (10 variables, 100 observations)
+#' set.seed(123)
+#' my_data <- as.data.frame(matrix(rnorm(1000), ncol = 10))
+#' colnames(my_data) <- paste0("Var", 1:10)
+#'
+#' # 2. Initialize the clusterer
+#' clusterer <- KMeansClusterer$new(
+#'   data = my_data,
+#'   n_clusters = 3,
+#'   standardize = TRUE,
+#'   seed = 42
+#' )
+#'
+#' # 3. Fit the model
+#' clusterer$fit()
+#'
+#' # 4. Examine results
+#' clusterer$print()
+#' clusterer$summary()
+#' results <- clusterer$get_results()
+#' print(results)
+#'
+#' # 5. Predict on new variables
+#' supp_data <- as.data.frame(matrix(rnorm(200), ncol = 2))
+#' colnames(supp_data) <- c("Supp1", "Supp2")
+#' predictions <- clusterer$predict(new_data = supp_data)
+#' print(predictions)
+#'
+#' # 6. Visualize
+#' plot_clustering_2d(clusterer)
+#' }
+#'
+#' @seealso
+#' Base class: \code{\link{BaseClusterer}}
+#'
+#' K selection methods: \code{\link{elbow_method}},
+#'   \code{\link{silhouette_method}}, \code{\link{calinski_harabasz_method}}
+#'
+#' Visualization: \code{\link{plot_clustering_2d}},
+#'   \code{\link{plot_cluster_quality}}
+#'
 #' @export
 KMeansClusterer <-  R6::R6Class("KMeansClusterer",
   inherit = BaseClusterer,
   
   private = list(
-    cluster_pca = NULL,     # List of PCA objects for each cluster
-    cluster_centers = NULL, # List of PC1 scores (centers) for each cluster
+    cluster_pca = NULL,     # List of PCA objects for each cluster (LOCAL - required for algorithm)
+    cluster_centers = NULL, # List of PC1 scores (centers) for each cluster (LOCAL - required)
     cluster_homogeneity = NULL,  # Homogeneity score for each cluster
     global_homogeneity = NULL,   # Overall weighted homogeneity score
-    pca_global = NULL,      # Global PCA for visualization
-    coords_fit = NULL,      # Coordinates for plot_fit
-    coords_predict = NULL,  # Coordinates for plot_predict
-    cluster_colors = NULL,  # Fixed colors between fit and predict
+    
+    pca_global = NULL,            # Global PCA for visualization (computed on demand)
+    pca_global_computed = FALSE,  # Flag: has global PCA been computed?
+    coords_fit = NULL,            # Coordinates for plot_fit (computed on demand)
+    coords_predict = NULL,        # Coordinates for plot_predict (computed on demand)
+    cluster_colors = NULL,        # Fixed colors (computed on demand)
+    last_new_data = NULL,         # Cache for last predict() data (enables plot_predict without args)
+    
     n_iterations = NULL,    # Actual number of iterations (per run)
     actual_runs = NULL,     # Actual number of initialization runs performed
     seed = NULL,            # Seed for reproducibility
@@ -22,33 +83,91 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
     n_init = 10,            # Maximum number of different initializations
     best_homogeneity = -Inf, # Best homogeneity achieved
     
-    # Validate data for KMeansClusterer (requires numeric variables)
-    # Overrides parent's validate_data to add numeric check
+    # Validate data for KMeansClusterer (accepts numeric and factor variables)
+    # Overrides parent's validate_data to accept mixed data
     validate_data = function() {
       # Call parent validation first
       super$validate_data()
       
-      # Check all columns are numeric (specific to KMeansClusterer)
-      if (!all(sapply(self$data, is.numeric))) {
-        stop("All variables in data must be numeric")
+      # Convert character and integer appropriately
+      for (col_name in names(self$data)) {
+        col_data <- self$data[[col_name]]
+        
+        if (is.character(col_data)) {
+          self$data[[col_name]] <- as.factor(col_data)
+        } else if (is.integer(col_data)) {
+          # Keep integers as numeric for continuous treatment
+          self$data[[col_name]] <- as.numeric(col_data)
+        }
+        
+        # Check for invalid types (dates, lists, etc.)
+        if (!is.numeric(self$data[[col_name]]) && !is.factor(self$data[[col_name]])) {
+          stop(sprintf("Variable '%s' has unsupported type '%s'. Only numeric and factor are allowed.",
+                      col_name, class(self$data[[col_name]])[1]))
+        }
+        
+        # Check for missing values
+        if (anyNA(self$data[[col_name]])) {
+          stop(sprintf("Variable '%s' contains missing values. Please impute them before clustering.", col_name))
+        }
       }
     },
     
-    # Initialize clusters using hierarchical clustering on correlation matrix
+    # Initialize clusters using hierarchical clustering on mixed dissimilarity matrix
     # Returns vector of cluster assignments
+    # Uses: Pearson² (quanti-quanti), Cramer's V² (quali-quali), η² (quanti-quali)
     initialize_correlation_based = function() {
-      # Correlation matrix between variables
-      cor_matrix <- cor(self$data)
+      n_vars <- ncol(self$data)
+      dist_mat <- matrix(0, n_vars, n_vars)
       
-      # Convert to distance: sqrt(2 * (1 - correlation))
-      # This is a proper distance metric for correlations
-      dist_matrix <- sqrt(2 * (1 - cor_matrix))
-      dist_obj <- as.dist(dist_matrix)
+      # Pre-calculate variable types
+      is_num <- sapply(self$data, is.numeric)
+      
+      # Compute pairwise similarities
+      for (i in 1:n_vars) {
+        for (j in i:n_vars) {
+          if (i == j) {
+            sim <- 1
+          } else {
+            v1 <- self$data[, i]
+            v2 <- self$data[, j]
+            type1 <- is_num[i]
+            type2 <- is_num[j]
+            
+            if (type1 && type2) {
+              # Quanti vs Quanti: Pearson correlation squared
+              sim <- cor(v1, v2)^2
+            } else if (!type1 && !type2) {
+              # Quali vs Quali: Cramer's V squared
+              suppressWarnings({
+                chisq_result <- chisq.test(table(v1, v2))
+                chisq_stat <- chisq_result$statistic
+              })
+              n <- length(v1)
+              min_dim <- min(length(levels(v1)), length(levels(v2))) - 1
+              if (min_dim > 0) {
+                sim <- min(1, chisq_stat / (n * min_dim))  # Cramer's V²
+              } else {
+                sim <- 0
+              }
+            } else {
+              # Quanti vs Quali: Correlation Ratio (η²)
+              if (type1) {
+                # v1 numeric, v2 factor
+                sim <- summary(lm(v1 ~ v2))$r.squared
+              } else {
+                # v1 factor, v2 numeric
+                sim <- summary(lm(v2 ~ v1))$r.squared
+              }
+            }
+          }
+          # Convert similarity to distance: d = sqrt(1 - sim)
+          dist_mat[i, j] <- dist_mat[j, i] <- sqrt(1 - sim)
+        }
+      }
       
       # Hierarchical clustering
-      hc <- hclust(dist_obj, method = "ward.D2")
-      
-      # Cut tree to get K clusters
+      hc <- hclust(as.dist(dist_mat), method = "ward.D2")
       clusters <- cutree(hc, k = self$n_clusters)
       
       return(clusters)
@@ -61,9 +180,39 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       n_vars <- ncol(self$data)
       clusters <- integer(n_vars)
       
-      # Start with correlation-based initialization to get seed variables
-      cor_matrix <- cor(self$data)
-      dist_matrix <- sqrt(2 * (1 - cor_matrix))
+      # Build mixed distance matrix (same as correlation init)
+      dist_matrix <- matrix(0, n_vars, n_vars)
+      is_num <- sapply(self$data, is.numeric)
+      
+      for (i in 1:n_vars) {
+        for (j in i:n_vars) {
+          if (i == j) {
+            sim <- 1
+          } else {
+            v1 <- self$data[, i]
+            v2 <- self$data[, j]
+            type1 <- is_num[i]
+            type2 <- is_num[j]
+            
+            if (type1 && type2) {
+              sim <- cor(v1, v2)^2
+            } else if (!type1 && !type2) {
+              chisq_stat <- suppressWarnings(chisq.test(table(v1, v2))$statistic)
+              n <- length(v1)
+              min_dim <- min(length(levels(v1)), length(levels(v2))) - 1
+              sim <- min(1, chisq_stat / (n * min_dim))
+            } else {
+              if (type1) {
+                sim <- summary(lm(v1 ~ v2))$r.squared
+              } else {
+                sim <- summary(lm(v2 ~ v1))$r.squared
+              }
+            }
+          }
+          
+          dist_matrix[i, j] <- dist_matrix[j, i] <- sqrt(1 - sim)
+        }
+      }
       
       # Select first seed variable randomly
       seed_vars <- integer(self$n_clusters)
@@ -71,9 +220,8 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       clusters[seed_vars[1]] <- 1
       
       # Select remaining seed variables (one per cluster)
-      # Choose variables that are least correlated with already selected seeds
+      # Choose variables that are most distant from already selected seeds
       for (k in 2:self$n_clusters) {
-        # For unassigned variables, find min correlation to any seed
         unassigned <- which(clusters == 0)
         if (length(unassigned) == 0) break
         
@@ -81,11 +229,11 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
         best_var <- unassigned[1]
         
         for (var in unassigned) {
-          # Min correlation to any existing seed
-          min_cor <- min(abs(cor_matrix[var, seed_vars[1:(k - 1)]]))
-          # We want variables with low correlation (high distance)
-          if ((1 - min_cor) > max_min_dist) {
-            max_min_dist <- 1 - min_cor
+          # Min distance to any existing seed
+          min_dist <- min(dist_matrix[var, seed_vars[1:(k - 1)]])
+          # We want variables with high min distance
+          if (min_dist > max_min_dist) {
+            max_min_dist <- min_dist
             best_var <- var
           }
         }
@@ -139,27 +287,168 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       return(clusters)
     },
     
-    # Calculate homogeneity of a cluster (proportion of variance explained by PC1)
-    # data_cluster: Data frame of variables in the cluster
+    # Compute global PCA only if needed (lazy loading)
+    # This method is called by visualization functions, not by fit()
+    compute_global_pca_if_needed = function() {
+      if (private$pca_global_computed) return(invisible(NULL))
+      
+      # Determine data types
+      all_numeric <- all(sapply(self$data, is.numeric))
+      all_factor <- all(sapply(self$data, is.factor))
+      
+      if (all_numeric) {
+        # Pure quantitative: use prcomp (faster and simpler, no PCAmixdata needed)
+        private$pca_global <- prcomp(self$data, center = TRUE, scale. = self$standardize)
+      } else {
+        # Mixed or qualitative: use PCAmix
+        if (!requireNamespace("PCAmixdata", quietly = TRUE)) {
+          stop("PCAmixdata package required for mixed/qualitative data visualization. Install with: install.packages('PCAmixdata')")
+        }
+        
+        split_global <- PCAmixdata::splitmix(self$data)
+        
+        # Run PCAmix with ndim=2 for 2D visualization
+        private$pca_global <- suppressWarnings(PCAmixdata::PCAmix(
+          X.quanti = split_global$X.quanti,
+          X.quali = split_global$X.quali,
+          ndim = 2,
+          graph = FALSE,
+          rename.level = TRUE
+        ))
+      }
+      
+      private$pca_global_computed <- TRUE
+      
+      # Compute coordinates and colors
+      private$compute_coords_fit()
+      private$cluster_colors <- rainbow(self$n_clusters)
+      
+      invisible(NULL)
+    },
+    
+    # Compute coordinates for plot_fit (lazy)
+    # Requires pca_global to be computed first
+    compute_coords_fit = function() {
+      if (!private$pca_global_computed) {
+        stop("Global PCA not computed. Call compute_global_pca_if_needed() first.")
+      }
+      
+      all_numeric <- all(sapply(self$data, is.numeric))
+      
+      if (all_numeric && inherits(private$pca_global, "prcomp")) {
+        # Pure quantitative with prcomp: extract loadings as coordinates
+        loadings <- private$pca_global$rotation[, 1:2, drop = FALSE]
+        coords <- data.frame(
+          PC1 = loadings[, 1],
+          PC2 = loadings[, 2],
+          variable = rownames(loadings),
+          stringsAsFactors = FALSE
+        )
+      } else {
+        # Mixed or qualitative with PCAmix
+        # Quantitative variables: use correlations with axes
+        coords_quant <- if (!is.null(private$pca_global$quanti.cor)) {
+          data.frame(
+            PC1 = private$pca_global$quanti.cor[, 1],
+            PC2 = private$pca_global$quanti.cor[, 2],
+            variable = rownames(private$pca_global$quanti.cor),
+            stringsAsFactors = FALSE
+          )
+        } else {
+          NULL
+        }
+        
+        # Qualitative variables: use eta² (correlation ratio with axes)
+        coords_qual <- if (!is.null(private$pca_global$quali.eta2)) {
+          # Extract eta² square roots
+          eta_sqrt_pc1 <- sqrt(private$pca_global$quali.eta2[, 1])
+          eta_sqrt_pc2 <- sqrt(private$pca_global$quali.eta2[, 2])
+          
+          # Get signs from categ.coord if available
+          if (!is.null(private$pca_global$categ.coord) && is.data.frame(private$pca_global$categ.coord)) {
+            var_names_qual <- rownames(private$pca_global$quali.eta2)
+            signs_pc1 <- sign(private$pca_global$categ.coord[match(var_names_qual, private$pca_global$categ.coord$variable), 1])
+            signs_pc2 <- sign(private$pca_global$categ.coord[match(var_names_qual, private$pca_global$categ.coord$variable), 2])
+            signs_pc1[is.na(signs_pc1)] <- 1
+            signs_pc2[is.na(signs_pc2)] <- 1
+          } else {
+            signs_pc1 <- rep(1, length(eta_sqrt_pc1))
+            signs_pc2 <- rep(1, length(eta_sqrt_pc2))
+          }
+          
+          data.frame(
+            PC1 = eta_sqrt_pc1 * signs_pc1,
+            PC2 = eta_sqrt_pc2 * signs_pc2,
+            variable = rownames(private$pca_global$quali.eta2),
+            stringsAsFactors = FALSE
+          )
+        } else {
+          NULL
+        }
+        
+        # Combine coordinates
+        coords <- rbind(coords_quant, coords_qual)
+      }
+      
+      if (!is.null(coords) && nrow(coords) > 0) {
+        # Add cluster assignments
+        var_names <- colnames(self$data)
+        coords$cluster <- factor(self$clusters[match(coords$variable, var_names)])
+      } else {
+        # Fallback: empty coords
+        coords <- data.frame(
+          PC1 = numeric(0),
+          PC2 = numeric(0),
+          variable = character(0),
+          cluster = factor(),
+          stringsAsFactors = FALSE
+        )
+      }
+      
+      private$coords_fit <- coords
+      invisible(NULL)
+    },
+    
+    # Calculate homogeneity of a cluster (proportion of variance explained by first component)
+    # data_cluster: Data frame of variables in the cluster (mixed or pure)
     # Returns numeric value between 0 and 1
     calculate_cluster_homogeneity = function(data_cluster) {
       if (ncol(data_cluster) < 2) {
         return(1.0)  # Single variable cluster has perfect homogeneity
       }
       
-      # PCA on cluster variables (observations in rows, variables in columns)
-      pca_cluster <- prcomp(data_cluster, center = TRUE, scale. = self$standardize)
+      # Check if data is purely quantitative (numeric)
+      all_numeric <- all(sapply(data_cluster, is.numeric))
       
-      # Variance explained by first component
-      variance_explained <- pca_cluster$sdev^2
-      total_variance <- sum(variance_explained)
-      
-      if (total_variance == 0) {
-        return(0)
+      if (all_numeric) {
+        # Pure quantitative: use prcomp (no PCAmixdata needed)
+        pca_result <- prcomp(data_cluster, center = TRUE, scale. = self$standardize)
+        variance_explained <- summary(pca_result)$importance[2, 1]  # Proportion of variance for PC1
+        return(variance_explained)
       }
       
-      # Homogeneity = proportion of variance explained by PC1
-      homogeneity <- variance_explained[1] / total_variance
+      # Mixed or qualitative data: require PCAmixdata
+      if (!requireNamespace("PCAmixdata", quietly = TRUE)) {
+        stop("PCAmixdata package required for mixed data clustering. Install with: install.packages('PCAmixdata')")
+      }
+      
+      # Use splitmix to automatically separate quanti and quali
+      split <- PCAmixdata::splitmix(data_cluster)
+      
+      # Run PCAmix with ndim=2 (minimum required by PCAmix)
+      # We only need first dimension but must request at least 2
+      ndim_requested <- min(2, ncol(data_cluster))
+      pca_mix <- suppressWarnings(PCAmixdata::PCAmix(
+        X.quanti = split$X.quanti,
+        X.quali = split$X.quali,
+        ndim = ndim_requested,
+        graph = FALSE,
+        rename.level = TRUE
+      ))
+      
+      # Extract percentage of variance from eig table (column 2)
+      # Homogeneity = percentage explained by first dimension / 100
+      homogeneity <- pca_mix$eig[1, 2] / 100
       
       return(homogeneity)
     },
@@ -184,66 +473,124 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       return(total_homogeneity)
     },
     
-    # Update cluster centers (PC1 for each cluster)
+    # Update cluster centers (first latent component for each cluster)
     # clusters: Current cluster assignments
-    # Returns list of PC1 scores for each cluster
+    # Returns list of latent component scores for each cluster (polymorphic: PCA/MCA/PCAmix)
     update_cluster_centers = function(clusters) {
       centers <- list()
+      pcas <- list()  # Store PCA/PCAmix objects for visualization
       
       for (k in 1:self$n_clusters) {
         vars_in_cluster <- which(clusters == k)
         
         if (length(vars_in_cluster) == 0) {
-          # Empty cluster - assign NULL (will be handled in reassignment)
           centers[[k]] <- NULL
+          pcas[[k]] <- NULL
         } else if (length(vars_in_cluster) == 1) {
-          # Single variable - PC1 is the variable itself (standardized)
-          if (self$standardize) {
-            centers[[k]] <- scale(self$data[, vars_in_cluster, drop = TRUE])
+          # Single variable case
+          var_data <- self$data[, vars_in_cluster, drop = FALSE]
+          
+          if (is.numeric(var_data[[1]])) {
+            # Numeric: use prcomp for consistency with visualization
+            res <- prcomp(var_data, center = TRUE, scale. = self$standardize)
+            centers[[k]] <- res$x[, 1]
+            pcas[[k]] <- res
           } else {
-            centers[[k]] <- scale(self$data[, vars_in_cluster, drop = TRUE], center = TRUE, scale = FALSE)
+            # Factor: use PCAmix on single variable (MCA with 1 variable)
+            if (!requireNamespace("PCAmixdata", quietly = TRUE)) {
+              stop("PCAmixdata package required for qualitative data. Install with: install.packages('PCAmixdata')")
+            }
+            res <- suppressWarnings(PCAmixdata::PCAmix(
+              X.quali = var_data,
+              ndim = 2,
+              graph = FALSE,
+              rename.level = TRUE
+            ))
+            centers[[k]] <- res$ind$coord[, 1]
+            pcas[[k]] <- res
           }
         } else {
-          # Multiple variables - compute PCA and extract PC1 scores
-          data_cluster <- self$data[, vars_in_cluster, drop = FALSE]
-          pca_cluster <- prcomp(data_cluster, center = TRUE, scale. = self$standardize)
-          centers[[k]] <- pca_cluster$x[, 1]  # PC1 scores
+          # Multiple variables: check if all quantitative first
+          sub_data <- self$data[, vars_in_cluster, drop = FALSE]
+          all_numeric <- all(sapply(sub_data, is.numeric))
+          
+          if (all_numeric) {
+            # 100% quantitative: use prcomp (no PCAmixdata needed)
+            res <- prcomp(sub_data, center = TRUE, scale. = self$standardize)
+            centers[[k]] <- res$x[, 1]
+            pcas[[k]] <- res
+          } else {
+            # Mixed or qualitative: use PCAmix
+            if (!requireNamespace("PCAmixdata", quietly = TRUE)) {
+              stop("PCAmixdata package required for mixed/qualitative data. Install with: install.packages('PCAmixdata')")
+            }
+            
+            split <- PCAmixdata::splitmix(sub_data)
+            ndim_requested <- min(2, ncol(sub_data))
+            res <- suppressWarnings(PCAmixdata::PCAmix(
+              X.quanti = split$X.quanti,
+              X.quali = split$X.quali,
+              ndim = ndim_requested,
+              graph = FALSE,
+              rename.level = TRUE
+            ))
+            centers[[k]] <- res$ind$coord[, 1]
+            pcas[[k]] <- res
+          }
         }
       }
+      
+      # Store PCA objects for visualization (THIS WAS MISSING!)
+      private$cluster_pca <- pcas
       
       return(centers)
     },
     
-    # Reassign variables to clusters based on correlation with centers (PC1)
-    # This is the K-means-like reassignment step
+    # Reassign variables to clusters based on association with centers (latent component)
+    # This is the K-means-like reassignment step (polymorphic: R² for quanti, η² for quali)
     # clusters: Current cluster assignments
-    # centers: List of PC1 scores for each cluster
+    # centers: List of latent component scores for each cluster
     # Returns new cluster assignments
     reassign_variables = function(clusters, centers) {
       n_vars <- ncol(self$data)
       new_clusters <- integer(n_vars)
       
-      # For each variable, assign to cluster with highest cor(var, PC1)^2
+      # Pre-calculate variable types for efficiency
+      is_num_vec <- sapply(self$data, is.numeric)
+      
+      # For each variable, assign to cluster with highest association (R² or η²)
       for (var_idx in 1:n_vars) {
         var_data <- self$data[, var_idx]
+        is_numeric <- is_num_vec[var_idx]
         
         best_cluster <- 1
-        best_cor_squared <- -Inf
+        best_assoc <- -Inf
         
         # Try each cluster
         for (k in 1:self$n_clusters) {
-          if (is.null(centers[[k]])) {
-            # Empty cluster - skip or use low correlation
-            cor_squared <- -1
+          if (is.null(centers[[k]])) next
+          
+          center_scores <- centers[[k]]
+          
+          # Calculate squared correlation or correlation ratio
+          if (is_numeric) {
+            # R² for quantitative
+            cor_val <- cor(var_data, center_scores)
+            assoc <- cor_val^2
           } else {
-            # Calculate correlation with PC1 of cluster k
-            cor_val <- cor(var_data, centers[[k]])
-            cor_squared <- cor_val^2  # Squared correlation
-            
-            if (cor_squared > best_cor_squared) {
-              best_cor_squared <- cor_squared
-              best_cluster <- k
-            }
+            # η² for qualitative (Correlation Ratio)
+            # Equivalent to R² of linear model: Center ~ Factor
+            tryCatch({
+              fit <- suppressWarnings(lm(center_scores ~ var_data))
+              assoc <- summary(fit)$r.squared
+            }, error = function(e) {
+              assoc <<- 0
+            })
+          }
+          
+          if (assoc > best_assoc) {
+            best_assoc <- assoc
+            best_cluster <- k
           }
         }
         
@@ -365,6 +712,13 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
         set.seed(private$seed)
       }
       
+      # Reset visualization and prediction caches
+      private$pca_global <- NULL
+      private$pca_global_computed <- FALSE
+      private$coords_fit <- NULL
+      private$coords_predict <- NULL
+      private$last_new_data <- NULL
+      
       # Run clustering multiple times with different initializations
       # n_init is now the MAXIMUM number of attempts
       best_result <- NULL
@@ -396,71 +750,32 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       private$actual_runs <- actual_runs
       private$best_homogeneity <- best_homogeneity
       
-      # Calculate PCA for each cluster and store centers (PC1)
+      # Calculate centers and homogeneity for each cluster using final assignments
       private$cluster_pca <- list()
       private$cluster_centers <- list()
       private$cluster_homogeneity <- numeric(self$n_clusters)
       
+      # Recalculate centers using the update_cluster_centers method
+      final_centers <- private$update_cluster_centers(self$clusters)
+      private$cluster_centers <- final_centers
+      
+      # Calculate homogeneity for each cluster
       for (k in 1:self$n_clusters) {
         vars_in_cluster <- which(self$clusters == k)
         if (length(vars_in_cluster) > 0) {
           data_cluster <- self$data[, vars_in_cluster, drop = FALSE]
-          
-          if (ncol(data_cluster) >= 2) {
-            pca_cluster <- prcomp(data_cluster, center = TRUE, scale. = self$standardize)
-            private$cluster_pca[[k]] <- pca_cluster
-            private$cluster_centers[[k]] <- pca_cluster$x[, 1]  # Store PC1 scores as center
-            
-            variance_explained <- pca_cluster$sdev^2
-            private$cluster_homogeneity[k] <- variance_explained[1] / sum(variance_explained)
-          } else {
-            # Single variable cluster
-            private$cluster_pca[[k]] <- NULL
-            if (self$standardize) {
-              private$cluster_centers[[k]] <- scale(self$data[, vars_in_cluster, drop = TRUE])
-            } else {
-              private$cluster_centers[[k]] <- scale(self$data[, vars_in_cluster, drop = TRUE],
-                                                   center = TRUE, scale = FALSE)
-            }
-            private$cluster_homogeneity[k] <- 1.0
-          }
+          private$cluster_homogeneity[k] <- private$calculate_cluster_homogeneity(data_cluster)
+        } else {
+          private$cluster_homogeneity[k] <- 0
         }
       }
       
-      # Global PCA for visualization
-      private$pca_global <- prcomp(self$data, center = TRUE, scale. = self$standardize)
-      
-      # Store coordinates for plotting (using global PCA)
-      # Handle case where PCA has <2 components (happens with 2 observations)
-      n_comp <- ncol(private$pca_global$rotation)
-      if (n_comp == 0) {
-        # No components - create empty coords with all necessary columns
-        coords <- data.frame(
-          PC1 = numeric(0), 
-          PC2 = numeric(0),
-          cluster = factor(),
-          variable = character(),
-          stringsAsFactors = FALSE
-        )
-      } else {
-        n_use <- min(2, n_comp)
-        coords <- as.data.frame(private$pca_global$rotation[, seq_len(n_use), drop = FALSE])
-        # Pad with zeros if only 1 component
-        if (n_use == 1) {
-          coords$PC2 <- 0
-        }
-        colnames(coords)[1:n_use] <- paste0("PC", 1:n_use)
-        # Add cluster and variable columns when coords is not empty
-        coords$cluster <- factor(self$clusters)
-        coords$variable <- rownames(private$pca_global$rotation)
-      }
-      private$coords_fit <- coords
-      
-      # Fixed colors
-      private$cluster_colors <- rainbow(self$n_clusters)
-      
+      # Store final results
       private$global_homogeneity <- best_homogeneity
       self$fitted <- TRUE
+      
+      # NOTE: Global PCA for visualization is NOT computed here (lazy loading)
+      # It will be computed on-demand when get_plot_data() is called
       
       invisible(self)
     },
@@ -478,38 +793,68 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
       if (!is.data.frame(new_data)) {
         stop("new_data must be a data.frame")
       }
-      if (!all(sapply(new_data, is.numeric))) {
-        stop("All variables must be numeric")
+      
+      # Convert character to factor
+      for (col_name in names(new_data)) {
+        if (is.character(new_data[[col_name]])) {
+          new_data[[col_name]] <- as.factor(new_data[[col_name]])
+        }
       }
+      
+      # Check valid types
+      for (col_name in names(new_data)) {
+        if (!is.numeric(new_data[[col_name]]) && !is.factor(new_data[[col_name]])) {
+          stop(sprintf("Variable '%s' has unsupported type '%s'. Only numeric and factor are allowed.",
+                      col_name, class(new_data[[col_name]])[1]))
+        }
+      }
+      
       if (nrow(new_data) != nrow(self$data)) {
         stop("new_data must have the same number of observations as training data")
       }
+      
+      # Cache data for lazy visualization (enables plot_predict without args)
+      private$last_new_data <- new_data
+      private$coords_predict <- NULL  # Reset coords since data changed
       
       n_new_vars <- ncol(new_data)
       pred_clusters <- integer(n_new_vars)
       pred_scores_matrix <- matrix(0, nrow = n_new_vars, ncol = self$n_clusters)
       
-      # For each new variable, assign to cluster with highest cor(var, center)^2
-      # This is the SAME logic as reassign_variables() but for new variables
+      # CORE PREDICTION LOGIC: Assign to cluster with highest association (R² or η²)
       for (var_idx in 1:n_new_vars) {
         var_data <- new_data[, var_idx]
+        is_var_numeric <- is.numeric(var_data)
         
         best_cluster <- 1
-        best_cor_squared <- -Inf
+        best_assoc <- -Inf
         
-        # Calculate correlation with each cluster center (PC1)
+        # Calculate association with each cluster center (local PC1)
         for (k in 1:self$n_clusters) {
           if (is.null(private$cluster_centers[[k]])) {
-            cor_squared <- -1
+            assoc <- -1
           } else {
-            # Correlation with PC1 of cluster k
-            cor_val <- cor(var_data, private$cluster_centers[[k]])
-            cor_squared <- cor_val^2  # Squared correlation
+            center_scores <- private$cluster_centers[[k]]
             
-            pred_scores_matrix[var_idx, k] <- cor_squared
+            # Calculate association depending on variable type
+            if (is_var_numeric) {
+              # Quantitative: R² (squared correlation)
+              cor_val <- cor(var_data, center_scores, use = "complete.obs")
+              assoc <- cor_val^2
+            } else {
+              # Qualitative: η² (correlation ratio)
+              tryCatch({
+                model <- suppressWarnings(lm(center_scores ~ var_data))
+                assoc <- summary(model)$r.squared
+              }, error = function(e) {
+                assoc <<- 0
+              })
+            }
             
-            if (cor_squared > best_cor_squared) {
-              best_cor_squared <- cor_squared
+            pred_scores_matrix[var_idx, k] <- assoc
+            
+            if (assoc > best_assoc) {
+              best_assoc <- assoc
               best_cluster <- k
             }
           }
@@ -518,85 +863,21 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
         pred_clusters[var_idx] <- best_cluster
       }
       
-      # Store coordinates for plot_predict
-      n_comp <- ncol(private$pca_global$rotation)
-      if (n_comp == 0) {
-        # No PCA components - create empty coords
-        coords_active <- data.frame(PC1 = numeric(0), PC2 = numeric(0))
-      } else {
-        n_use <- min(2, n_comp)
-        coords_active <- as.data.frame(private$pca_global$rotation[, seq_len(n_use), drop = FALSE])
-        
-        # Ensure we have PC1 and PC2 columns (pad with 0 if needed)
-        if (n_use == 1) {
-          coords_active$PC2 <- 0
-          colnames(coords_active)[1] <- "PC1"
-        } else {
-          colnames(coords_active) <- c("PC1", "PC2")
-        }
-      }
+      # Return prediction results
+      result <- data.frame(
+        variable = colnames(new_data),
+        cluster = pred_clusters,
+        row.names = NULL
+      )
       
-      coords_active$cluster <- self$clusters
-      coords_active$type <- "active"
-      coords_active$variable <- rownames(private$pca_global$rotation)
-      
-      # Project new variables (supplementary/illustrative) onto global PCA space
-      # Note: new_data has variables in columns, observations in rows (same as training)
-      # For visualization: we calculate loadings as correlation between new variables and PCA axes
-      # Each new variable must be standardized (with its own parameters) to compute meaningful correlations
-      if (self$standardize) {
-        new_data_scaled <- scale(new_data, center = TRUE, scale = TRUE)
-      } else {
-        new_data_scaled <- scale(new_data, center = TRUE, scale = FALSE)
-      }
-      
-      # Calculate loadings for supplementary variables as correlation with PCA scores
-      # This gives the coordinates (PC1, PC2) for plotting the new variables on the same factorial plane
-      n_pca_comp <- ncol(private$pca_global$x)
-      if (n_pca_comp == 0) {
-        # No PCA scores - create empty loadings
-        new_loadings <- matrix(0, nrow = ncol(new_data), ncol = 2)
-        colnames(new_loadings) <- c("PC1", "PC2")
-      } else {
-        n_use <- min(2, n_pca_comp)
-        new_loadings <- cor(new_data_scaled, private$pca_global$x[, seq_len(n_use), drop = FALSE])
-        
-        # Pad with zeros if only 1 component
-        if (n_use == 1) {
-          new_loadings <- cbind(new_loadings, PC2 = 0)
-        }
-        colnames(new_loadings) <- c("PC1", "PC2")
-      }
-      
-      coords_illus <- as.data.frame(new_loadings)
-      coords_illus$cluster <- pred_clusters
-      coords_illus$type <- "illustrative"
-      coords_illus$variable <- colnames(new_data)
-      
-      private$coords_predict <- rbind(coords_active, coords_illus)
-      
-      # Return
       if (return_scores) {
-        # Create result data frame with all scores
-        result <- data.frame(
-          variable = colnames(new_data),
-          cluster = pred_clusters,
-          row.names = NULL
-        )
-        
         # Add score columns for each cluster
         for (k in 1:self$n_clusters) {
           result[[paste0("score_", k)]] <- pred_scores_matrix[, k]
         }
-        
-        return(result)
-      } else {
-        return(data.frame(
-          variable = colnames(new_data),
-          cluster = pred_clusters,
-          row.names = NULL
-        ))
       }
+      
+      return(result)
     },
     
     #' @description Get PCA objects for each cluster.
@@ -655,36 +936,65 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
     },
     
     #' @description Get global PCA object (for visualization).
-    #' @return PCA object from prcomp.
+    #' @return PCA object from prcomp or PCAmix.
     get_pca = function() {
       private$check_fitted()
+      private$compute_global_pca_if_needed()  # Trigger lazy loading
       return(private$pca_global)
     },
     
     #' @description Get PCA loadings for visualization (global PCA).
-    #' @return Data frame of loadings.
+    #' @return Data frame of loadings (for prcomp) or correlations (for PCAmix).
     get_loadings = function() {
       private$check_fitted()
-      return(as.data.frame(private$pca_global$rotation))
+      private$compute_global_pca_if_needed()  # Trigger lazy loading
+      
+      if (is.null(private$pca_global)) return(data.frame())
+      
+      # Handle both prcomp and PCAmix objects
+      if (inherits(private$pca_global, "prcomp")) {
+        return(as.data.frame(private$pca_global$rotation))
+      } else {
+        # PCAmix: return correlations for quantitative variables
+        if (!is.null(private$pca_global$quanti.cor)) {
+          return(as.data.frame(private$pca_global$quanti.cor))
+        } else {
+          return(data.frame())
+        }
+      }
     },
     
     #' @description Get cluster centers in loadings space (for K selection methods).
     #' @return Matrix of cluster centers (k rows x 2 columns for PC1 and PC2).
     get_centers = function() {
       private$check_fitted()
+      private$compute_global_pca_if_needed()  # Trigger lazy loading
+      
+      if (is.null(private$pca_global)) return(matrix(0, nrow = self$n_clusters, ncol = 2))
       
       # Calculate mean loadings for each cluster
-      # Handle case where PCA might have fewer than 2 components
-      n_components <- ncol(private$pca_global$rotation)
-      
-      if (n_components == 0) {
-        # No PCA components available - return zero matrix
-        return(matrix(0, nrow = self$n_clusters, ncol = 2))
+      # Handle both prcomp and PCAmix objects
+      if (inherits(private$pca_global, "prcomp")) {
+        n_components <- ncol(private$pca_global$rotation)
+        
+        if (n_components == 0) {
+          return(matrix(0, nrow = self$n_clusters, ncol = 2))
+        }
+        
+        # Take at most 2 components
+        n_use <- min(2, n_components)
+        loadings <- private$pca_global$rotation[, seq_len(n_use), drop = FALSE]
+      } else {
+        # PCAmix: use correlations for quantitative variables
+        if (!is.null(private$pca_global$quanti.cor)) {
+          n_components <- ncol(private$pca_global$quanti.cor)
+          n_use <- min(2, n_components)
+          loadings <- private$pca_global$quanti.cor[, seq_len(n_use), drop = FALSE]
+        } else {
+          return(matrix(0, nrow = self$n_clusters, ncol = 2))
+        }
       }
       
-      # Take at most 2 components
-      n_use <- min(2, n_components)
-      loadings <- private$pca_global$rotation[, seq_len(n_use), drop = FALSE]
       centers <- matrix(0, nrow = self$n_clusters, ncol = n_use)
       
       for (k in 1:self$n_clusters) {
@@ -703,29 +1013,165 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
     },
     
     #' @description Get plot data for fitted model (internal use by visualization functions).
-    #' @return List with coords, colors, pca.
+    #' Uses lazy loading: computes global PCA only when first requested.
+    #' @return List with coords, colors, pca, centers (geometric barycenters).
     get_plot_data = function() {
       if (!self$fitted) return(NULL)
+      
+      # Trigger lazy loading of global PCA if needed
+      private$compute_global_pca_if_needed()
+      
+      # Compute geometric barycenters of each cluster in PCA space
+      # These represent the "average direction" of variables in each cluster
+      centers_pca <- matrix(NA, nrow = self$n_clusters, ncol = 2)
+      
+      for (k in 1:self$n_clusters) {
+        vars_in_cluster <- which(self$clusters == k)
+        if (length(vars_in_cluster) > 0) {
+          # Average of PC1 and PC2 coordinates for variables in this cluster
+          centers_pca[k, 1] <- mean(private$coords_fit$PC1[vars_in_cluster])
+          centers_pca[k, 2] <- mean(private$coords_fit$PC2[vars_in_cluster])
+        }
+      }
+      
+      colnames(centers_pca) <- c("PC1", "PC2")
+      rownames(centers_pca) <- paste0("C", 1:self$n_clusters)
       
       list(
         coords = private$coords_fit,
         colors = private$cluster_colors,
         pca = private$pca_global,
-        centers = NULL  # No centers in homogeneity-based approach
+        centers = centers_pca  # Geometric barycenters (visual approximation of latent centers)
       )
     },
     
     #' @description Get plot data for predictions (internal use by visualization functions).
-    #' @return List with coords, colors, pca.
-    get_plot_data_predict = function() {
-      if (is.null(private$coords_predict)) return(NULL)
+    #' Computes coords_predict on demand if not already available.
+    #' @param new_data New data (optional, only needed if coords_predict not computed yet).
+    #' @return List with coords, colors, pca, centers.
+    get_plot_data_predict = function(new_data = NULL) {
+      if (!self$fitted) return(NULL)
+      
+      # Trigger lazy loading of global PCA if needed
+      private$compute_global_pca_if_needed()
+      
+      # Determine which data to use: explicit arg > cached data
+      data_to_use <- if (!is.null(new_data)) new_data else private$last_new_data
+      
+      # If coords not computed yet but we have data, compute them now
+      if (is.null(private$coords_predict) && !is.null(data_to_use)) {
+        self$prepare_plot_predict(data_to_use)
+      }
+      
+      # Final check
+      if (is.null(private$coords_predict)) {
+        warning("No prediction coordinates available. Call predict(new_data) or prepare_plot_predict(new_data) first.")
+        return(NULL)
+      }
+      
+      # Compute geometric barycenters using ALL variables (active + supplementary)
+      centers_pca <- matrix(NA, nrow = self$n_clusters, ncol = 2)
+      
+      for (k in 1:self$n_clusters) {
+        vars_in_cluster <- which(private$coords_predict$cluster == k)
+        if (length(vars_in_cluster) > 0) {
+          centers_pca[k, 1] <- mean(private$coords_predict$PC1[vars_in_cluster])
+          centers_pca[k, 2] <- mean(private$coords_predict$PC2[vars_in_cluster])
+        }
+      }
+      
+      colnames(centers_pca) <- c("PC1", "PC2")
+      rownames(centers_pca) <- paste0("C", 1:self$n_clusters)
       
       list(
         coords = private$coords_predict,
         colors = private$cluster_colors,
         pca = private$pca_global,
-        centers = NULL  # No centers in homogeneity-based approach
+        centers = centers_pca  # Geometric barycenters (updated with supplementary variables)
       )
+    },
+    
+    #' @description Prepare plot coordinates for predicted variables (supplementary).
+    #' This method computes visualization coordinates for new variables.
+    #' Call this after predict() if you want to visualize predictions.
+    #' @param new_data New data frame with same observations as training data.
+    #' @param pred_result Optional prediction result (from predict()). If NULL, will call predict().
+    #' @return Self (invisibly).
+    prepare_plot_predict = function(new_data, pred_result = NULL) {
+      private$check_fitted()
+      
+      # Ensure global PCA is computed
+      private$compute_global_pca_if_needed()
+      
+      # Get predictions if not provided
+      if (is.null(pred_result)) {
+        pred_result <- self$predict(new_data, return_scores = FALSE)
+      }
+      
+      pred_clusters <- pred_result$cluster
+      n_new_vars <- ncol(new_data)
+      
+      # Start with active variables (from fit)
+      coords_active <- private$coords_fit
+      coords_active$type <- "active"
+      
+      # Project new variables onto global PCA space
+      all_numeric <- all(sapply(self$data, is.numeric))
+      
+      if (all_numeric && inherits(private$pca_global, "prcomp")) {
+        # Case 1: Pure quantitative with prcomp
+        if (self$standardize) {
+          new_data_scaled <- scale(new_data, center = TRUE, scale = TRUE)
+        } else {
+          new_data_scaled <- scale(new_data, center = TRUE, scale = FALSE)
+        }
+        
+        # Calculate loadings as correlation with PCA scores
+        pca_scores <- private$pca_global$x[, 1:2, drop = FALSE]
+        new_coords <- cor(new_data_scaled, pca_scores)
+        
+      } else {
+        # Case 2: Mixed data with PCAmix
+        pca_scores <- private$pca_global$ind$coord[, 1:2, drop = FALSE]
+        new_coords <- matrix(0, nrow = n_new_vars, ncol = 2)
+        
+        for (var_idx in 1:n_new_vars) {
+          var_data <- new_data[, var_idx]
+          
+          if (is.numeric(var_data)) {
+            # Numeric: correlation with axes
+            new_coords[var_idx, 1] <- cor(var_data, pca_scores[, 1], use = "complete.obs")
+            new_coords[var_idx, 2] <- cor(var_data, pca_scores[, 2], use = "complete.obs")
+          } else {
+            # Factor: eta² (correlation ratio)
+            for (dim in 1:2) {
+              tryCatch({
+                fit <- suppressWarnings(lm(pca_scores[, dim] ~ var_data))
+                eta2 <- summary(fit)$r.squared
+                sign_val <- sign(mean(fit$fitted.values[var_data == levels(var_data)[1]]))
+                new_coords[var_idx, dim] <- sqrt(eta2) * sign_val
+              }, error = function(e) {
+                new_coords[var_idx, dim] <<- 0
+              })
+            }
+          }
+        }
+      }
+      
+      # Create supplementary coordinates
+      coords_illus <- data.frame(
+        PC1 = new_coords[, 1],
+        PC2 = new_coords[, 2],
+        variable = colnames(new_data),
+        cluster = factor(pred_clusters),
+        type = "illustrative",
+        stringsAsFactors = FALSE
+      )
+      
+      # Combine active and supplementary
+      private$coords_predict <- rbind(coords_active, coords_illus)
+      
+      invisible(self)
     },
     
     #' @description Plot fitted clustering results in 2D loadings space.
@@ -835,12 +1281,9 @@ KMeansClusterer <-  R6::R6Class("KMeansClusterer",
         n_vars <- sum(self$clusters == j)
         cat(sprintf("  Cluster %d: %.3f (n=%d vars)\n", j, homog, n_vars))
         
-        if (!is.null(private$cluster_pca[[j]])) {
-          var_exp <- private$cluster_pca[[j]]$sdev^2
-          total_var <- sum(var_exp)
-          cat(sprintf("    PC1 explains %.1f%% of cluster variance\n", 
-                     (var_exp[1] / total_var) * 100))
-        }
+        # Homogeneity already represents PC1 variance proportion
+        cat(sprintf("    First dimension explains %.1f%% of cluster variance\n", 
+                   homog * 100))
       }
       
       cat("\n=================================================\n")

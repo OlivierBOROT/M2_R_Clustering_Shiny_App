@@ -2,26 +2,27 @@
 % Please edit documentation in R/00_utils.R
 \name{standardize_data}
 \alias{standardize_data}
-\title{Utility Functions for Clustering}
+\title{Standardize data (center and scale)}
 \usage{
 standardize_data(data, center = TRUE, scale = TRUE)
 }
 \arguments{
-\item{data}{A data frame or matrix to standardize}
+\item{data}{A data frame or matrix to standardize.}
 
-\item{center}{Logical or numeric vector of centers. If TRUE, centering is done by subtracting the column means.}
+\item{center}{Logical or numeric vector of centers (default \code{TRUE}).
+If \code{TRUE}, centering is done by subtracting the column means.}
 
-\item{scale}{Logical or numeric vector of scales. If TRUE, scaling is done by dividing by the standard deviations.}
+\item{scale}{Logical or numeric vector of scales (default \code{TRUE}).
+If \code{TRUE}, scaling is done by dividing by the standard deviations.}
 }
 \value{
-A list containing the scaled data, the centers, and the scales
+A data frame containing the scaled data with attributes:
+\item{centers}{Numeric vector of column means used for centering.}
+\item{scales}{Numeric vector of column standard deviations used for scaling.}
 }
 \description{
-This script contains utility functions used by all the implemented clustering algorithms.
+Standardize data (center and scale)
 }
-\keyword{(center}
-\keyword{Standardize}
-\keyword{and}
-\keyword{data}
-\keyword{internal}
-\keyword{scale)}
+\seealso{
+\code{\link{apply_standardization}} to apply pre-computed parameters.
+}

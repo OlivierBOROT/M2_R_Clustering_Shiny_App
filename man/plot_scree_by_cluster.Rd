@@ -2,15 +2,49 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_scree_by_cluster}
 \alias{plot_scree_by_cluster}
-\title{Plot scree plot of explained variance by cluster}
+\title{Plot Scree Plot of Explained Variance by Cluster}
 \usage{
 plot_scree_by_cluster(clusterer, main = "Scree Plot by Cluster")
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Scree Plot by Cluster"}).}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot scree plot of explained variance by cluster
+Creates scree plots showing the variance explained by each principal component
+within each cluster.
+}
+\details{
+This function creates a multi-panel plot with one scree plot per cluster.
+Each panel shows:
+\itemize{
+\item Bar plot: Percentage of variance explained by each PC
+\item Red line: Cumulative percentage of variance explained
+}
+
+Requires that the clusterer has a \code{get_cluster_pca()} method that returns
+PCA results for each cluster.
+
+Useful for assessing cluster dimensionality and identifying whether a cluster
+is well-represented by its first principal component.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_scree_by_cluster(clusterer)
+}
+
+}
+\seealso{
+\code{\link{plot_cluster_quality}} for cluster homogeneity metrics.
+\code{\link{plot_variable_contributions}} for variable importance.
 }

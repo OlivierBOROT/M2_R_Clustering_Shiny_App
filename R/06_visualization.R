@@ -5,14 +5,41 @@
 NULL
 
 
-#' Plot clustering results in 2D PCA space
+#' Plot Clustering Results in 2D PCA Space
 #' 
-#' Plot clustering results in 2D PCA space for fitted model
+#' Displays the clustering results by projecting variables onto the first two
+#' principal components of a PCA.
 #' 
-#' @param clusterer A fitted clustering object (e.g., KMeansClusterer)
-#' @param main Title of the plot
-#' @param show_centers Logical, whether to show cluster centers
-#' @param show_labels Logical, whether to show variable labels
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}} (e.g., \code{\link{KMeansClusterer}}).
+#' @param main Character string for the plot title. If \code{NULL} (default),
+#'   a default title is used.
+#' @param show_centers Logical. Whether to display cluster centers (default: \code{TRUE}).
+#' @param show_labels Logical. Whether to show variable names as labels (default: \code{TRUE}).
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function creates a scatter plot of variables in the 2D space defined by
+#' the first two principal components. Variables are colored by their cluster
+#' assignment. If available, cluster centers are marked with asterisks.
+#' 
+#' The percentage of variance explained by each PC is shown in the axis labels.
+#' 
+#' @seealso
+#' \code{\link{KMeansClusterer}} for creating clustering objects.
+#' \code{\link{plot_clustering_with_supp}} for plotting with supplementary variables.
+#' \code{\link{plot_cluster_quality}} for quality metrics visualization.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_clustering_2d(clusterer)
+#' }
+#' 
 #' @export
 plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show_labels = TRUE) {
   # Validation
@@ -34,7 +61,7 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
   
   # default title
   if (is.null(main)) {
-    main <- "Clustering des variables actives"
+    main <- "Clustering Results in 2D PCA Space"
   }
   
   # % variance explained calculation
@@ -65,9 +92,10 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
   }
   
   # Cluster centers
-  if (show_centers && !is.null(centers) && !is.null(pca)) {
-    # Projection des centres dans l'espace PCA
-    centers_pca <- as.matrix(centers) %*% pca$rotation[, 1:2]
+  if (show_centers && !is.null(centers)) {
+    # CORRECTION : Les centres sont déjà en coordonnées 2D (PC1, PC2) calculés par KMeansClusterer
+    # Pas de projection supplémentaire nécessaire (erreur "non-conformable arguments" sinon)
+    centers_pca <- as.matrix(centers)
     points(centers_pca[, 1], centers_pca[, 2], 
            pch = 8, col = "black", cex = 2, lwd = 2)
     text(centers_pca[, 1], centers_pca[, 2], 
@@ -75,7 +103,7 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
          pos = 1, cex = 0.9, col = "black", font = 2)
   }
   
-  # LLegend
+  # Legend
   legend("topright", 
          legend = c(paste("Cluster", seq_along(unique(coords$cluster))), 
                     if(show_centers) "Centers" else NULL),
@@ -88,12 +116,42 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
 }
 
 
-#' Plot clustering results with supplementary variables
+#' Plot Clustering Results wit  h Supplementary Variables
 #' 
-#' @param clusterer A fitted clustering object with prediction made
-#' @param main Title of the plot
-#' @param show_centers Logical, whether to show cluster centers
-#' @param show_labels Logical, whether to show variable labels
+#' Displays clustering results distinguishing between active variables (used for
+#' clustering) and supplementary variables (projected after clustering).
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}, with predictions already made.
+#' @param main Character string for the plot title. If \code{NULL} (default),
+#'   a default title is used.
+#' @param show_centers Logical. Whether to display cluster centers (default: \code{TRUE}).
+#' @param show_labels Logical. Whether to show variable names as labels (default: \code{TRUE}).
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function creates a scatter plot in 2D PCA space where active variables
+#' (circles) and supplementary variables (triangles) are distinguished by shape.
+#' All variables are colored by their cluster assignment.
+#' 
+#' Requires that \code{predict()} has been called on the clusterer object first.
+#' 
+#' @seealso
+#' \code{\link{plot_clustering_2d}} for plotting without supplementary variables.
+#' \code{\link{KMeansClusterer}} for creating clustering objects.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' supp_data <- data.frame(matrix(rnorm(200), ncol = 2))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' clusterer$predict(supp_data)
+#' plot_clustering_with_supp(clusterer)
+#' }
+#' 
 #' @export
 plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRUE, show_labels = TRUE) {
   # Validation
@@ -146,8 +204,8 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
   }
   
   # Centers
-  if (show_centers && !is.null(centers) && !is.null(pca)) {
-    centers_pca <- as.matrix(centers) %*% pca$rotation[, 1:2]
+  if (show_centers && !is.null(centers)) {
+    centers_pca <- as.matrix(centers)
     points(centers_pca[, 1], centers_pca[, 2], 
            pch = 8, col = "black", cex = 2, lwd = 2)
     text(centers_pca[, 1], centers_pca[, 2], 
@@ -167,11 +225,25 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
 }
 
 
-#' Plot dendrogram for hierarchical clustering
+#' Plot Dendrogram for Hierarchical Clustering
 #' 
-#' @param clusterer A fitted hierarchical clustering object
-#' @param main Title of the plot
-#' @param ... Additional parameters passed to plot()
+#' Creates a dendrogram visualization for hierarchical clustering methods.
+#' 
+#' @param clusterer A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}).
+#' @param main Character string for the plot title (default: \code{"Dendrogram"}).
+#' @param ... Additional parameters passed to \code{plot()}.
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function is currently a placeholder and will be implemented according to
+#' the structure of \code{MCA_HClusterer}. It requires hierarchical clustering
+#' results stored in the clusterer object.
+#' 
+#' @seealso
+#' \code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
+#' 
 #' @export
 plot_dendrogram <- function(clusterer, main = "Dendrogram", ...) {
   # Validation
@@ -185,11 +257,41 @@ plot_dendrogram <- function(clusterer, main = "Dendrogram", ...) {
 }
 
 
-#' Plot heatmap of correlations by cluster
+#' Plot Heatmap of Correlations by Cluster
 #' 
-#' @param clusterer A fitted clustering object
-#' @param main Title of the plot
-#' @param reorder Logical, whether to reorder variables by cluster
+#' Creates a heatmap of the correlation matrix, optionally reordered by cluster
+#' assignment to highlight within-cluster relationships.
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param main Character string for the plot title
+#'   (default: \code{"Correlation Heatmap by Cluster"}).
+#' @param reorder Logical. Whether to reorder variables by cluster assignment
+#'   (default: \code{TRUE}).
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function computes the correlation matrix of all variables and displays it
+#' as a heatmap. When \code{reorder = TRUE}, variables are sorted by cluster,
+#' and black lines separate the clusters visually.
+#' 
+#' Colors range from blue (negative correlation) through white (no correlation)
+#' to red (positive correlation).
+#' 
+#' @seealso
+#' \code{\link{plot_network_graph}} for network-based correlation visualization.
+#' \code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_correlation_heatmap(clusterer, reorder = TRUE)
+#' }
+#' 
 #' @export
 plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by Cluster", reorder = TRUE) {
   # Validation
@@ -237,12 +339,42 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
 }
 
 
-#' Plot network graph of variable correlations
+#' Plot Network Graph of Variable Correlations
 #' 
-#' @param clusterer A fitted clustering object
-#' @param threshold Correlation threshold for displaying edges (default 0.3)
-#' @param main Title of the plot
-#' @param layout Layout algorithm: "fruchterman.reingold" (default), "circle", "kamada.kawai"
+#' Creates a network graph where nodes represent variables and edges represent
+#' correlations above a specified threshold.
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param threshold Numeric. Minimum absolute correlation value for displaying
+#'   edges (default: \code{0.3}).
+#' @param main Character string for the plot title
+#'   (default: \code{"Variable Correlation Network"}).
+#' @param layout Character string specifying the layout algorithm:
+#'   \code{"fruchterman.reingold"} (default), \code{"circle"}, or \code{"kamada.kawai"}.
+#' 
+#' @return Invisibly returns the \code{igraph} object if \code{igraph} is available,
+#'   otherwise \code{NULL}.
+#' 
+#' @details
+#' This function requires the \code{igraph} package. If not available, it falls back
+#' to a simple bar plot showing the number of connections per variable.
+#' 
+#' Nodes are colored by cluster assignment. Edges are drawn only for correlations
+#' with absolute value exceeding \code{threshold}.
+#' 
+#' @seealso
+#' \code{\link{plot_correlation_heatmap}} for heatmap-based correlation visualization.
+#' \code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_network_graph(clusterer, threshold = 0.4, layout = "circle")
+#' }
+#' 
 #' @export
 plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Correlation Network", 
                                layout = "fruchterman.reingold") {
@@ -257,21 +389,21 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
     return(plot_correlation_matrix_simple(clusterer, threshold, main))
   }
   
-  # Calcul matrice de corrélation
+  # Calculate correlation matrix
   cor_matrix <- cor(clusterer$data)
   
-  # Créer matrice d'adjacence (corrélations > threshold)
+  # Create adjacency matrix (correlations > threshold)
   adj_matrix <- abs(cor_matrix) > threshold
-  diag(adj_matrix) <- FALSE  # Pas de self-loops
+  diag(adj_matrix) <- FALSE  # No self-loops
   
-  # Créer graphe
+  # Create graph
   g <- igraph::graph_from_adjacency_matrix(adj_matrix, mode = "undirected", weighted = NULL)
   
-  # Ajouter attributs
+  # Add attributes
   igraph::V(g)$cluster <- as.factor(clusterer$clusters)
   igraph::V(g)$name <- clusterer$variable_names
   
-  # Couleurs par cluster
+  # Colors by cluster
   cluster_colors <- rainbow(clusterer$n_clusters)
   vertex_colors <- cluster_colors[clusterer$clusters]
   
@@ -295,7 +427,7 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
        layout = layout_coords,
        main = main)
   
-  # Légende
+  # Legend
   legend("topright", 
          legend = paste("Cluster", 1:clusterer$n_clusters),
          fill = cluster_colors,
@@ -331,13 +463,48 @@ plot_correlation_matrix_simple <- function(clusterer, threshold, main) {
 }
 
 
-#' Plot radar chart comparing clusters
+#' Plot Radar Chart of Variable-Cluster Association Strength
 #' 
-#' @param clusterer A fitted clustering object
-#' @param main Title of the plot
-#' @param standardize Logical, whether to standardize variables before plotting
+#' Creates a radar chart displaying the strength of association (correlation)
+#' between each variable and its cluster center (PC1).
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param main Character string for the plot title
+#'   (default: \code{"Cluster Strength (Correlation with PC1)"}).
+#' @param standardize Logical. Deprecated parameter (kept for backward compatibility).
+#'   Correlations are always in the range 0 to 1.
+#' 
+#' @return Invisibly returns the cluster strength matrix (clusters x variables).
+#'   Values represent absolute correlation with cluster PC1.
+#' 
+#' @details
+#' This function requires the \code{fmsb} package. If not available, it falls back
+#' to a line plot representation.
+#' 
+#' **Important:** Unlike classical K-Means on individuals, variable clustering uses
+#' standardized data where means are 0 by definition. Therefore, this function
+#' displays the **strength of association** (|correlation| with PC1) instead of
+#' mean values.
+#' 
+#' For each cluster, variables belonging to it will show high values (close to 1),
+#' while variables in other clusters will be near 0. This creates clear visual
+#' "peaks" showing cluster composition.
+#' 
+#' @seealso
+#' \code{\link{plot_cluster_quality}} for cluster size and homogeneity metrics.
+#' \code{\link{plot_variable_contributions}} for loadings-based contributions.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_radar_chart(clusterer)
+#' }
+#' 
 #' @export
-plot_radar_chart <- function(clusterer, main = "Cluster Profiles (Radar Chart)", standardize = TRUE) {
+plot_radar_chart <- function(clusterer, main = "Cluster Strength (Correlation with PC1)", standardize = TRUE) {
   # Validation
   if (!clusterer$fitted) {
     stop("Model must be fitted before plotting. Call fit() first.")
@@ -349,40 +516,48 @@ plot_radar_chart <- function(clusterer, main = "Cluster Profiles (Radar Chart)",
     return(plot_cluster_profiles_lines(clusterer, main, standardize))
   }
   
-  # Calculer profils moyens par cluster
-  cluster_profiles <- matrix(NA, nrow = clusterer$n_clusters, ncol = ncol(clusterer$data))
+  # Get cluster PCA objects
+  cluster_pca <- clusterer$get_cluster_pca()
+  
+  # Calculate cluster strength profiles (correlation with PC1)
+  n_vars <- ncol(clusterer$data)
+  cluster_profiles <- matrix(0, nrow = clusterer$n_clusters, ncol = n_vars)
   colnames(cluster_profiles) <- clusterer$variable_names
   rownames(cluster_profiles) <- paste("Cluster", 1:clusterer$n_clusters)
   
   for (k in 1:clusterer$n_clusters) {
     vars_in_cluster <- which(clusterer$clusters == k)
-    if (length(vars_in_cluster) > 0) {
-      cluster_data <- clusterer$data[, vars_in_cluster, drop = FALSE]
-      cluster_profiles[k, vars_in_cluster] <- colMeans(cluster_data)
+    
+    if (length(vars_in_cluster) > 0 && !is.null(cluster_pca[[k]])) {
+      # Extract PC1 scores (individuals projected on PC1)
+      if (inherits(cluster_pca[[k]], "prcomp")) {
+        pc1_scores <- cluster_pca[[k]]$x[, 1]
+      } else if (inherits(cluster_pca[[k]], "PCAmix")) {
+        pc1_scores <- cluster_pca[[k]]$ind$coord[, 1]
+      } else {
+        next  # Skip if unknown PCA type
+      }
+      
+      # Calculate absolute correlation of each cluster variable with PC1
+      for (v in vars_in_cluster) {
+        var_data <- clusterer$data[, v]
+        
+        # Compute correlation (handle potential NA values)
+        cor_val <- suppressWarnings(cor(var_data, pc1_scores, use = "complete.obs"))
+        
+        if (!is.na(cor_val)) {
+          # Store absolute correlation (strength of association)
+          cluster_profiles[k, v] <- abs(cor_val)
+        }
+      }
     }
   }
   
-  # Replace NA values with 0 (variables not in cluster)
-  cluster_profiles[is.na(cluster_profiles)] <- 0
-  
-  # Standardize if requested
-  if (standardize) {
-    cluster_profiles <- scale(cluster_profiles)
-  }
-  
   # Prepare data for fmsb (need to add max/min rows)
-  max_val <- max(cluster_profiles, na.rm = TRUE)
-  min_val <- min(cluster_profiles, na.rm = TRUE)
-  
-  # Handle case where all values are NA
-  if (!is.finite(max_val) || !is.finite(min_val)) {
-    warning("All cluster profile values are NA. Cannot create radar chart.")
-    return(invisible(NULL))
-  }
-  
+  # For correlations: max = 1, min = 0
   radar_data <- rbind(
-    rep(max_val, ncol(cluster_profiles)),  # Max
-    rep(min_val, ncol(cluster_profiles)),  # Min
+    rep(1, n_vars),  # Max (perfect correlation)
+    rep(0, n_vars),  # Min (no correlation)
     cluster_profiles
   )
   radar_data <- as.data.frame(radar_data)
@@ -401,13 +576,13 @@ plot_radar_chart <- function(clusterer, main = "Cluster Profiles (Radar Chart)",
     cglcol = "grey",
     cglty = 1,
     axislabcol = "grey",
-    caxislabels = seq(min_val, max_val, length.out = 5),
+    caxislabels = c("0.0", "0.25", "0.5", "0.75", "1.0"),  # Fixed scale for correlations
     cglwd = 0.8,
     vlcex = 0.8,
     title = main
   )
   
-  # Légende
+  # Legend
   legend("topright",
          legend = rownames(cluster_profiles),
          col = line_colors,
@@ -419,22 +594,38 @@ plot_radar_chart <- function(clusterer, main = "Cluster Profiles (Radar Chart)",
 }
 
 
-#' Fallback line plot for cluster profiles
+#' Fallback line plot for cluster strength (correlation with PC1)
 #' @keywords internal
 plot_cluster_profiles_lines <- function(clusterer, main, standardize) {
-  # Calculer profils
-  cluster_profiles <- matrix(NA, nrow = clusterer$n_clusters, ncol = ncol(clusterer$data))
+  # Get cluster PCA objects
+  cluster_pca <- clusterer$get_cluster_pca()
+  
+  # Calculate cluster strength profiles (correlation with PC1)
+  n_vars <- ncol(clusterer$data)
+  cluster_profiles <- matrix(0, nrow = clusterer$n_clusters, ncol = n_vars)
+  colnames(cluster_profiles) <- clusterer$variable_names
   
   for (k in 1:clusterer$n_clusters) {
     vars_in_cluster <- which(clusterer$clusters == k)
-    if (length(vars_in_cluster) > 0) {
-      cluster_data <- clusterer$data[, vars_in_cluster, drop = FALSE]
-      cluster_profiles[k, vars_in_cluster] <- colMeans(cluster_data)
+    
+    if (length(vars_in_cluster) > 0 && !is.null(cluster_pca[[k]])) {
+      # Extract PC1 scores
+      if (inherits(cluster_pca[[k]], "prcomp")) {
+        pc1_scores <- cluster_pca[[k]]$x[, 1]
+      } else if (inherits(cluster_pca[[k]], "PCAmix")) {
+        pc1_scores <- cluster_pca[[k]]$ind$coord[, 1]
+      } else {
+        next
+      }
+      
+      # Calculate absolute correlation with PC1
+      for (v in vars_in_cluster) {
+        cor_val <- suppressWarnings(cor(clusterer$data[, v], pc1_scores, use = "complete.obs"))
+        if (!is.na(cor_val)) {
+          cluster_profiles[k, v] <- abs(cor_val)
+        }
+      }
     }
-  }
-  
-  if (standardize) {
-    cluster_profiles <- scale(cluster_profiles)
   }
   
   # Plot
@@ -444,9 +635,10 @@ plot_cluster_profiles_lines <- function(clusterer, main, standardize) {
           lwd = 2,
           col = rainbow(clusterer$n_clusters),
           xlab = "Variables",
-          ylab = "Mean value",
+          ylab = "Correlation strength with PC1",
           main = main,
-          xaxt = "n")
+          xaxt = "n",
+          ylim = c(0, 1))
   
   axis(1, at = seq_len(ncol(clusterer$data)), labels = clusterer$variable_names, las = 2, cex.axis = 0.7)
   
@@ -461,12 +653,44 @@ plot_cluster_profiles_lines <- function(clusterer, main, standardize) {
 }
 
 
-#' Plot variable contributions to clusters
+#' Plot Variable Contributions to Clusters
 #' 
-#' @param clusterer A fitted clustering object
-#' @param cluster_id Cluster number to visualize (NULL for all clusters)
-#' @param top_n Number of top contributing variables to show
-#' @param main Title of the plot
+#' Displays the top contributing variables to each cluster based on PCA loadings.
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param cluster_id Integer. Specific cluster number to visualize, or \code{NULL}
+#'   to display all clusters (default: \code{NULL}).
+#' @param top_n Integer. Number of top contributing variables to show
+#'   (default: \code{10}).
+#' @param main Character string for the plot title
+#'   (default: \code{"Variable Contributions"}).
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function displays bar plots showing which variables contribute most to
+#' each cluster's first principal component. Contributions are measured by the
+#' absolute value of PCA loadings on PC1.
+#' 
+#' Requires that the clusterer has a \code{get_cluster_pca()} method and a
+#' \code{get_cluster_homogeneity()} method.
+#' 
+#' When \code{cluster_id = NULL}, creates a multi-panel plot showing all clusters.
+#' 
+#' @seealso
+#' \code{\link{plot_cluster_quality}} for cluster quality metrics.
+#' \code{\link{plot_scree_by_cluster}} for variance explained per cluster.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_variable_contributions(clusterer, top_n = 5)
+#' }
+#' 
 #' @export
 plot_variable_contributions <- function(clusterer, cluster_id = NULL, top_n = 10, 
                                        main = "Variable Contributions") {
@@ -545,10 +769,47 @@ plot_single_cluster_contrib <- function(clusterer, k, top_n, homog) {
 }
 
 
-#' Plot cluster sizes and quality metrics
+#' Plot Cluster Sizes and Quality Metrics
 #' 
-#' @param clusterer A fitted clustering object
-#' @param main Title of the plot
+#' Creates bar plots showing cluster sizes and, if available, cluster homogeneity
+#' (variance explained by the first principal component).
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param main Character string for the plot title
+#'   (default: \code{"Cluster Quality Metrics"}).
+#' 
+#' @return Invisibly returns a list with two components:
+#' \item{sizes}{Integer vector of cluster sizes (number of variables per cluster).}
+#' \item{homogeneity}{Numeric vector of cluster homogeneity values, or \code{NULL}
+#'   if not available.}
+#' 
+#' @details
+#' If the clusterer has a \code{get_cluster_homogeneity()} method, this function
+#' creates a two-panel plot showing:
+#' \itemize{
+#'   \item Left panel: Number of variables per cluster
+#'   \item Right panel: Homogeneity per cluster with mean line
+#' }
+#' 
+#' Otherwise, only cluster sizes are displayed.
+#' 
+#' Homogeneity measures how well the first principal component explains variance
+#' within each cluster (higher values indicate more homogeneous clusters).
+#' 
+#' @seealso
+#' \code{\link{plot_variable_contributions}} for within-cluster variable importance.
+#' \code{\link{plot_scree_by_cluster}} for detailed variance decomposition.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' metrics <- plot_cluster_quality(clusterer)
+#' print(metrics$sizes)
+#' }
+#' 
 #' @export
 plot_cluster_quality <- function(clusterer, main = "Cluster Quality Metrics") {
   # Validation
@@ -604,10 +865,45 @@ plot_cluster_quality <- function(clusterer, main = "Cluster Quality Metrics") {
 }
 
 
-#' Plot scree plot of explained variance by cluster
+#' Plot Scree Plot of Explained Variance by Cluster
 #' 
-#' @param clusterer A fitted clustering object
-#' @param main Title of the plot
+#' Creates scree plots showing the variance explained by each principal component
+#' within each cluster.
+#' 
+#' @param clusterer A fitted clustering object inheriting from
+#'   \code{\link{BaseClusterer}}.
+#' @param main Character string for the plot title
+#'   (default: \code{"Scree Plot by Cluster"}).
+#' 
+#' @return Invisibly returns \code{NULL}. The function is called for its side effect
+#'   of creating a plot.
+#' 
+#' @details
+#' This function creates a multi-panel plot with one scree plot per cluster.
+#' Each panel shows:
+#' \itemize{
+#'   \item Bar plot: Percentage of variance explained by each PC
+#'   \item Red line: Cumulative percentage of variance explained
+#' }
+#' 
+#' Requires that the clusterer has a \code{get_cluster_pca()} method that returns
+#' PCA results for each cluster.
+#' 
+#' Useful for assessing cluster dimensionality and identifying whether a cluster
+#' is well-represented by its first principal component.
+#' 
+#' @seealso
+#' \code{\link{plot_cluster_quality}} for cluster homogeneity metrics.
+#' \code{\link{plot_variable_contributions}} for variable importance.
+#' 
+#' @examples
+#' \dontrun{
+#' data <- data.frame(matrix(rnorm(500), ncol = 5))
+#' clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_scree_by_cluster(clusterer)
+#' }
+#' 
 #' @export
 plot_scree_by_cluster <- function(clusterer, main = "Scree Plot by Cluster") {
   # Validation
@@ -632,7 +928,18 @@ plot_scree_by_cluster <- function(clusterer, main = "Scree Plot by Cluster") {
   
   for (k in 1:clusterer$n_clusters) {
     if (!is.null(cluster_pca[[k]])) {
-      var_exp <- (cluster_pca[[k]]$sdev^2 / sum(cluster_pca[[k]]$sdev^2)) * 100
+      pca_obj <- cluster_pca[[k]]
+      
+      # Handle both prcomp and PCAmix objects
+      if (inherits(pca_obj, "PCAmix")) {
+        # PCAmix: eig[,1] are eigenvalues
+        eigenvalues <- pca_obj$eig[, 1]
+        var_exp <- (eigenvalues / sum(eigenvalues)) * 100
+      } else {
+        # prcomp: sdev^2 are eigenvalues
+        eigenvalues <- pca_obj$sdev^2
+        var_exp <- (eigenvalues / sum(eigenvalues)) * 100
+      }
       
       barplot(var_exp,
               names.arg = paste0("PC", seq_along(var_exp)),

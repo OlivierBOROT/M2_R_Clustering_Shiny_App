@@ -52,3 +52,9 @@ MixedClusterer <- R6::R6Class(
     # private methods and fields specific to Mixed data clustering can be added here
   )
 )
+
+#Voici la spécification finale recommandée pour votre Algo 3 "Libre" :
+
+    # Nom : HCV_Qualitative (Hierarchical Clustering of Variables - Qualitative Approach).
+
+    # Pré-traitement (Réponse à Rakotomalala) : Discrétisation automatique des variables continues en k=3 ou k=4 classes par quantiles. Cela "nettoie" les outliers et standardise le problème.

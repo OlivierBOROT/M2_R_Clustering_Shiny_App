@@ -1,13 +1,28 @@
-#' @title Utility Functions for Clustering
-#' @description This script contains utility functions used by all the implemented clustering algorithms.
-#' @keywords internal
+#' Low-Level Utility Functions for Clustering
+#' 
+#' This module contains low-level mathematical and data manipulation utilities
+#' for clustering algorithms. For cluster validation and K selection methods,
+#' see \code{\link{cluster-validator}}.
+#' 
+#' @name M2RClust-utils
+#' @importFrom grDevices colorRampPalette rainbow
+#' @importFrom graphics abline axis barplot grid image legend lines matplot mtext par plot.new points text
+#' @importFrom stats cor dist as.dist chisq.test
+#' @importFrom utils head
+NULL
 
 #' Standardize data (center and scale)
-#' 
-#' @param data A data frame or matrix to standardize
-#' @param center Logical or numeric vector of centers. If TRUE, centering is done by subtracting the column means.
-#' @param scale Logical or numeric vector of scales. If TRUE, scaling is done by dividing by the standard deviations.
-#' @return A list containing the scaled data, the centers, and the scales
+#'
+#' @param data A data frame or matrix to standardize.
+#' @param center Logical or numeric vector of centers (default \code{TRUE}).
+#'   If \code{TRUE}, centering is done by subtracting the column means.
+#' @param scale Logical or numeric vector of scales (default \code{TRUE}).
+#'   If \code{TRUE}, scaling is done by dividing by the standard deviations.
+#' @return A data frame containing the scaled data with attributes:
+#' \item{centers}{Numeric vector of column means used for centering.}
+#' \item{scales}{Numeric vector of column standard deviations used for scaling.}
+#'
+#' @seealso \code{\link{apply_standardization}} to apply pre-computed parameters.
 #' @export
 standardize_data <- function(data, center = TRUE, scale = TRUE) {
   scaled_data <- scale(data, center = center, scale = scale)
@@ -25,11 +40,16 @@ standardize_data <- function(data, center = TRUE, scale = TRUE) {
 }
 
 #' Apply standardization using pre-computed parameters
-#' 
-#' @param data A data frame or matrix to standardize
-#' @param centers Numeric vector of centers (means) from training data
-#' @param scales Numeric vector of scales (standard deviations) from training data
-#' @return Standardized data frame
+#'
+#' @param data A data frame or matrix to standardize.
+#' @param centers Numeric vector of centers (means) from training data.
+#'   If \code{NULL}, no centering is applied.
+#' @param scales Numeric vector of scales (standard deviations) from training data.
+#'   If \code{NULL}, no scaling is applied.
+#' @return A standardized data frame. If both \code{centers} and \code{scales}
+#'   are \code{NULL}, returns the data unchanged.
+#'
+#' @seealso \code{\link{standardize_data}} to compute parameters and standardize.
 #' @export
 apply_standardization <- function(data, centers, scales) {
   if (is.null(centers) && is.null(scales)) {
@@ -40,11 +60,111 @@ apply_standardization <- function(data, centers, scales) {
   return(as.data.frame(scaled_data))
 }
 
+#' Generate Euclidean Distance Matrix Based on Correlation (ClustOfVar Approach)
+#'
+#' Computes the Euclidean distance matrix between variables using the correlation-based
+#' distance metric. For quantitative variables: \code{d(i,j) = sqrt(2 * (1 - cor(i,j)))}.
+#' For mixed data, uses appropriate association measures (R², η², Cramér's V²).
+#' This distance is guaranteed to be Euclidean and is the foundation of the ClustOfVar algorithm.
+#'
+#' @param data Data frame or matrix with variables in columns, observations in rows.
+#'   Supports numeric, integer, and factor variables.
+#' @return A \code{dist} object containing pairwise distances between variables.
+#' @export
+get_correlation_distance_matrix <- function(data) {
+  n_vars <- ncol(data)
+  is_num <- sapply(data, is.numeric)
+  
+  # Fast path: Pure quantitative data
+  if (all(is_num)) {
+    scaled_data <- scale(data, center = TRUE, scale = TRUE)
+    cor_matrix <- cor(scaled_data)
+    
+    # Apply Euclidean transformation: sqrt(2 * (1 - cor))
+    # This is a proper Euclidean distance metric
+    dist_matrix <- sqrt(2 * (1 - cor_matrix))
+    
+    return(as.dist(dist_matrix))
+  }
+  
+  # Mixed data: Calculate association-based distances
+  # Uses same logic as KMeansClusterer$initialize_correlation_based
+  dist_mat <- matrix(0, n_vars, n_vars)
+  
+  for (i in 1:n_vars) {
+    for (j in i:n_vars) {
+      if (i == j) {
+        # Distance to self = 0
+        dist_mat[i, j] <- 0
+      } else {
+        var_i <- data[[i]]
+        var_j <- data[[j]]
+        is_i_num <- is_num[i]
+        is_j_num <- is_num[j]
+        
+        if (is_i_num && is_j_num) {
+          # Quanti-Quanti: Pearson correlation
+          r <- cor(var_i, var_j)
+          sim <- r^2
+        } else if (!is_i_num && !is_j_num) {
+          # Quali-Quali: Cramér's V²
+          contingency <- table(var_i, var_j)
+          chi2 <- suppressWarnings(chisq.test(contingency, correct = FALSE)$statistic)
+          n <- sum(contingency)
+          min_dim <- min(nrow(contingency), ncol(contingency)) - 1
+          if (min_dim > 0) {
+            cramers_v <- sqrt(chi2 / (n * min_dim))
+            sim <- cramers_v^2
+          } else {
+            sim <- 0
+          }
+        } else {
+          # Quanti-Quali: η² (correlation ratio)
+          if (is_i_num) {
+            quant_var <- var_i
+            qual_var <- var_j
+          } else {
+            quant_var <- var_j
+            qual_var <- var_i
+          }
+          
+          # Compute η² = Between-group variance / Total variance
+          group_means <- tapply(quant_var, qual_var, mean, na.rm = TRUE)
+          overall_mean <- mean(quant_var, na.rm = TRUE)
+          
+          ss_between <- sum(tapply(quant_var, qual_var, function(x) {
+            length(x) * (mean(x, na.rm = TRUE) - overall_mean)^2
+          }), na.rm = TRUE)
+          
+          ss_total <- sum((quant_var - overall_mean)^2, na.rm = TRUE)
+          
+          if (ss_total > 0) {
+            eta_squared <- ss_between / ss_total
+            sim <- eta_squared
+          } else {
+            sim <- 0
+          }
+        }
+        
+        # Convert similarity to distance: d = sqrt(2 * (1 - similarity))
+        # Bounded in [0, sqrt(2)] (like correlation-based distance)
+        dist_val <- sqrt(2 * (1 - sim))
+        dist_mat[i, j] <- dist_val
+        dist_mat[j, i] <- dist_val
+      }
+    }
+  }
+  
+  return(as.dist(dist_mat))
+}
+
 #' Calculate Euclidean distance between points and centers
-#' 
-#' @param points Matrix or data frame of points (rows = observations)
-#' @param centers Matrix or data frame of cluster centers
-#' @return Distance matrix (rows = centers, cols = points)
+#'
+#' @param points Matrix or data frame of points (rows = observations, columns = features).
+#' @param centers Matrix or data frame of cluster centers (rows = centers, columns = features).
+#'   Must have the same number of columns as \code{points}.
+#' @return A numeric matrix of distances with dimensions \code{nrow(centers)} by \code{nrow(points)}.
+#'   Element \code{[i, j]} contains the Euclidean distance from center \code{i} to point \code{j}.
 #' @export
 euclidean_distance <- function(points, centers) {
   # Convert to matrices to avoid column name conflicts
@@ -65,421 +185,4 @@ euclidean_distance <- function(points, centers) {
   n_points <- nrow(points_mat)
   
   return(dist_matrix[1:n_centers, (n_centers + 1):(n_centers + n_points), drop = FALSE])
-}
-
-#' Elbow Method
-#' 
-#' Calculates the within-cluster inertia for different values of K and identifies
-#' the "elbow" of the curve which suggests the optimal number of clusters.
-#' 
-#' @param clusterer_class R6 class of the clusterer (e.g., KMeansClusterer)
-#' @param data Dataset to be clustered
-#' @param k_range Vector of K values to test (default: 2:10)
-#' @param plot Logical, whether to display the plot (default: TRUE)
-#' @param ... Additional parameters for the clusterer
-#' @return List with inertias, k_values, and suggested_k
-#' @export
-elbow_method <- function(clusterer_class, data, k_range = 2:10, plot = TRUE, ...) {
-  if (length(k_range) < 2) {
-    stop("k_range must contain at least 2 values")
-  }
-  
-  inertias <- numeric(length(k_range))
-  
-  cat("Calculating elbow method...\n")
-  for (i in seq_along(k_range)) {
-    k <- k_range[i]
-    cat(sprintf("  K = %d...\n", k))
-    
-    # Create and train the clusterer
-    clusterer <- clusterer_class$new(data = data, n_clusters = k, ...)
-    clusterer$fit()
-    
-    # Retrieve inertia
-    inertias[i] <- clusterer$get_inertia()
-  }
-  
-  # Detect elbow using the point farthest from the line method
-  # Line between first and last point
-  x1 <- k_range[1]
-  y1 <- inertias[1]
-  x2 <- k_range[length(k_range)]
-  y2 <- inertias[length(inertias)]
-  
-  # Perpendicular distance of each point to the line
-  distances <- numeric(length(k_range))
-  for (i in seq_along(k_range)) {
-    x0 <- k_range[i]
-    y0 <- inertias[i]
-    
-    # Point-line distance
-    num <- abs((y2 - y1) * x0 - (x2 - x1) * y0 + x2 * y1 - y2 * x1)
-    den <- sqrt((y2 - y1)^2 + (x2 - x1)^2)
-    distances[i] <- num / den
-  }
-  
-  # The elbow is the point with the greatest distance
-  suggested_k <- k_range[which.max(distances)]
-  
-  # Plot
-  if (plot) {
-    plot(k_range, inertias, type = "b", pch = 19, col = "steelblue",
-         xlab = "Number of clusters (K)", ylab = "Within-cluster inertia",
-         main = "Elbow Method",
-         las = 1, lwd = 2)
-    
-    # Reference line
-    lines(c(x1, x2), c(y1, y2), col = "gray50", lty = 2)
-    
-    # Mark the suggested K
-    points(suggested_k, inertias[which(k_range == suggested_k)], 
-           pch = 19, col = "red", cex = 2)
-    text(suggested_k, inertias[which(k_range == suggested_k)], 
-         labels = sprintf("K = %d", suggested_k), 
-         pos = 3, col = "red", font = 2)
-    
-    grid()
-  }
-  
-  cat(sprintf("\nK suggested by elbow method: %d\n", suggested_k))
-  
-  return(list(
-    k_values = k_range,
-    inertias = inertias,
-    suggested_k = suggested_k,
-    distances = distances
-  ))
-}
-
-#' Silhouette Method
-#' 
-#' Calculates the average silhouette coefficient for different values of K.
-#' The optimal K is the one that maximizes this coefficient.
-#' 
-#' @param clusterer_class R6 class of the clusterer
-#' @param data Dataset to be clustered
-#' @param k_range Vector of K values to test (default: 2:10)
-#' @param plot Logical, whether to display the plot (default: TRUE)
-#' @param ... Additional parameters for the clusterer
-#' @return List with silhouette_scores, k_values, and suggested_k
-#' @export
-silhouette_method <- function(clusterer_class, data, k_range = 2:10, plot = TRUE, ...) {
-  if (!requireNamespace("cluster", quietly = TRUE)) {
-    stop("The 'cluster' package is required. Install it with install.packages('cluster')")
-  }
-  
-  if (length(k_range) < 2) {
-    stop("k_range must contain at least 2 values")
-  }
-  
-  silhouette_scores <- numeric(length(k_range))
-  
-  cat("Calculating silhouette method...\n")
-  for (i in seq_along(k_range)) {
-    k <- k_range[i]
-    cat(sprintf("  K = %d...\n", k))
-    
-    # Create and train the clusterer
-    clusterer <- clusterer_class$new(data = data, n_clusters = k, ...)
-    clusterer$fit()
-    
-    # Retrieve loadings and clusters
-    loadings <- clusterer$get_loadings()
-    clusters <- clusterer$clusters
-    
-    # Calculate silhouette
-    sil <- cluster::silhouette(clusters, dist(loadings))
-    silhouette_scores[i] <- mean(sil[, 3])
-  }
-  
-  # Optimal K = maximum silhouette
-  suggested_k <- k_range[which.max(silhouette_scores)]
-  
-  # Plot
-  if (plot) {
-    plot(k_range, silhouette_scores, type = "b", pch = 19, col = "steelblue",
-         xlab = "Number of clusters (K)", ylab = "Average silhouette coefficient",
-         main = "Silhouette Method",
-         las = 1, lwd = 2, ylim = c(0, max(silhouette_scores) * 1.1))
-    
-    # Mark the suggested K
-    points(suggested_k, silhouette_scores[which(k_range == suggested_k)], 
-           pch = 19, col = "red", cex = 2)
-    text(suggested_k, silhouette_scores[which(k_range == suggested_k)], 
-         labels = sprintf("K = %d", suggested_k), 
-         pos = 3, col = "red", font = 2)
-    
-    abline(h = 0, col = "gray50", lty = 2)
-    grid()
-  }
-  
-  cat(sprintf("\nSuggested K by silhouette method: %d\n", suggested_k))
-  cat(sprintf("Silhouette coefficient: %.3f\n", silhouette_scores[which(k_range == suggested_k)]))
-  
-  return(list(
-    k_values = k_range,
-    silhouette_scores = silhouette_scores,
-    suggested_k = suggested_k
-  ))
-}
-
-#' Calinski-Harabasz Method (Variance Ratio Criterion)
-#' 
-#' Calculates the Calinski-Harabasz index for different values of K.
-#' The optimal K is the one that maximizes this index.
-#' 
-#' @param clusterer_class R6 class of the clusterer
-#' @param data Dataset to be clustered
-#' @param k_range Vector of K values to test (default: 2:10)
-#' @param plot Logical, whether to display the plot (default: TRUE)
-#' @param ... Additional parameters for the clusterer
-#' @return List with ch_scores, k_values, and suggested_k
-#' @export
-calinski_harabasz_method <- function(clusterer_class, data, k_range = 2:10, plot = TRUE, ...) {
-  if (length(k_range) < 2) {
-    stop("k_range must contain at least 2 values")
-  }
-  
-  ch_scores <- numeric(length(k_range))
-  
-  cat("Calculating Calinski-Harabasz index...\n")
-  for (i in seq_along(k_range)) {
-    k <- k_range[i]
-    cat(sprintf("  K = %d...\n", k))
-    
-    # Create and train the clusterer
-    clusterer <- clusterer_class$new(data = data, n_clusters = k, ...)
-    clusterer$fit()
-    
-    # Retrieve loadings and clusters
-    loadings <- as.matrix(clusterer$get_loadings())
-    clusters <- clusterer$clusters
-    
-    # Calculate CH index
-    n <- nrow(loadings)
-    k_actual <- length(unique(clusters))
-    
-    # Global center
-    global_center <- colMeans(loadings)
-    
-    # Between-cluster variance
-    between_ss <- 0
-    for (j in 1:k_actual) {
-      cluster_points <- loadings[clusters == j, , drop = FALSE]
-      n_j <- nrow(cluster_points)
-      cluster_center <- colMeans(cluster_points)
-      between_ss <- between_ss + n_j * sum((cluster_center - global_center)^2)
-    }
-    
-    # Within-cluster variance
-    within_ss <- clusterer$get_inertia()
-    
-    # CH index
-    if (within_ss > 0 && k_actual > 1) {
-      ch_scores[i] <- (between_ss / (k_actual - 1)) / (within_ss / (n - k_actual))
-    } else {
-      ch_scores[i] <- 0
-    }
-  }
-  
-  # Optimal K = Maximal CH
-  suggested_k <- k_range[which.max(ch_scores)]
-  
-  # Plot
-  if (plot) {
-    plot(k_range, ch_scores, type = "b", pch = 19, col = "steelblue",
-         xlab = "Number of clusters (K)", ylab = "Calinski-Harabasz Index",
-         main = "Calinski-Harabasz Method",
-         las = 1, lwd = 2)
-    
-    # Mark the suggested K
-    points(suggested_k, ch_scores[which(k_range == suggested_k)], 
-           pch = 19, col = "red", cex = 2)
-    text(suggested_k, ch_scores[which(k_range == suggested_k)], 
-         labels = sprintf("K = %d", suggested_k), 
-         pos = 3, col = "red", font = 2)
-    
-    grid()
-  }
-  
-  cat(sprintf("\nK suggested by Calinski-Harabasz: %d\n", suggested_k))
-  cat(sprintf("Calinski-Harabasz score: %.2f\n", ch_scores[which(k_range == suggested_k)]))
-  
-  return(list(
-    k_values = k_range,
-    ch_scores = ch_scores,
-    suggested_k = suggested_k
-  ))
-}
-
-#' Davies-Bouldin Method
-#' 
-#' Calculates the Davies-Bouldin index for different values of K.
-#' The optimal K is the one that MINIMIZES this index.
-#' 
-#' @param clusterer_class R6 class of the clusterer
-#' @param data Dataset to be clustered
-#' @param k_range Vector of K values to test (default: 2:10)
-#' @param plot Logical, whether to display the plot (default: TRUE)
-#' @param ... Additional parameters for the clusterer
-#' @return List with db_scores, k_values, and suggested_k
-#' @export
-davies_bouldin_method <- function(clusterer_class, data, k_range = 2:10, plot = TRUE, ...) {
-  if (length(k_range) < 2) {
-    stop("k_range must contain at least 2 values")
-  }
-  
-  db_scores <- numeric(length(k_range))
-  
-  cat("Calculating Davies-Bouldin index...\n")
-  for (i in seq_along(k_range)) {
-    k <- k_range[i]
-    cat(sprintf("  K = %d...\n", k))
-    
-    # Create and train the clusterer
-    clusterer <- clusterer_class$new(data = data, n_clusters = k, ...)
-    clusterer$fit()
-    
-    # Retrieve loadings, centers, and clusters
-    loadings <- as.matrix(clusterer$get_loadings())
-    centers <- as.matrix(clusterer$get_centers())
-    clusters <- clusterer$clusters
-    
-    # Calculate DB index
-    k_actual <- length(unique(clusters))
-    
-    # Calculate intra-cluster dispersions
-    dispersions <- numeric(k_actual)
-    for (j in 1:k_actual) {
-      cluster_points <- loadings[clusters == j, , drop = FALSE]
-      if (nrow(cluster_points) > 0) {
-        # Extract center vector and match dimensions with cluster_points
-        n_dims <- ncol(cluster_points)
-        n_center_dims <- ncol(centers)
-        # Use only the dimensions available in both
-        dims_to_use <- min(n_dims, n_center_dims)
-        center_vec <- centers[j, seq_len(dims_to_use)]
-        cluster_subset <- cluster_points[, seq_len(dims_to_use), drop = FALSE]
-        dispersions[j] <- mean(sqrt(rowSums((sweep(cluster_subset, 2, center_vec))^2)))
-      }
-    }
-    
-    # Calculate DB index
-    db_values <- numeric(k_actual)
-    for (j in 1:k_actual) {
-      max_ratio <- 0
-      for (l in 1:k_actual) {
-        if (j != l) {
-          dist_centers <- sqrt(sum((centers[j, ] - centers[l, ])^2))
-          if (dist_centers > 0) {
-            ratio <- (dispersions[j] + dispersions[l]) / dist_centers
-            max_ratio <- max(max_ratio, ratio)
-          }
-        }
-      }
-      db_values[j] <- max_ratio
-    }
-    
-    db_scores[i] <- mean(db_values)
-  }
-  
-  # Optimal K = Minimal DB
-  suggested_k <- k_range[which.min(db_scores)]
-  
-  # Plot
-  if (plot) {
-    plot(k_range, db_scores, type = "b", pch = 19, col = "steelblue",
-         xlab = "Number of clusters (K)", ylab = "Davies-Bouldin Index",
-         main = "Davies-Bouldin Method\n(lower is better)",
-         las = 1, lwd = 2)
-    
-    # Mark the suggested K
-    points(suggested_k, db_scores[which(k_range == suggested_k)], 
-           pch = 19, col = "red", cex = 2)
-    text(suggested_k, db_scores[which(k_range == suggested_k)], 
-         labels = sprintf("K = %d", suggested_k), 
-         pos = 3, col = "red", font = 2)
-    
-    grid()
-  }
-  
-  cat(sprintf("\nSuggested K by Davies-Bouldin: %d\n", suggested_k))
-  cat(sprintf("DB Score: %.3f\n", db_scores[which(k_range == suggested_k)]))
-  
-  return(list(
-    k_values = k_range,
-    db_scores = db_scores,
-    suggested_k = suggested_k
-  ))
-}
-
-#' Comparison of all K selection methods
-#' 
-#' Runs all selection methods and displays a comparative summary.
-#' 
-#' @param clusterer_class R6 class of the clusterer
-#' @param data Dataset to be clustered
-#' @param k_range Vector of K values to test (default: 2:10)
-#' @param plot Logical, whether to display plots (default: TRUE)
-#' @param ... Additional parameters for the clusterer
-#' @return List with results from all methods
-#' @export
-compare_k_selection_methods <- function(clusterer_class, data, k_range = 2:10, plot = TRUE, ...) {
-  cat("========================================\n")
-  cat("COMPARISON OF K SELECTION METHODS\n")
-  cat("========================================\n\n")
-  
-  # Plot configuration
-  if (plot) {
-    old_par <- par(no.readonly = TRUE)
-    on.exit(par(old_par))
-    par(mfrow = c(2, 2), mar = c(4, 4, 3, 1))
-  }
-  
-  # 1. Elbow Method
-  cat("\n1. ELBOW METHOD\n")
-  cat("-------------------\n")
-  elbow_res <- elbow_method(clusterer_class, data, k_range, plot = plot, ...)
-  
-  # 2. Silhouette Method
-  cat("\n2. SILHOUETTE METHOD\n")
-  cat("---------------------------\n")
-  silhouette_res <- silhouette_method(clusterer_class, data, k_range, plot = plot, ...)
-  
-  # 3. Calinski-Harabasz
-  cat("\n3. CALINSKI-HARABASZ METHOD\n")
-  cat("-------------------------------\n")
-  ch_res <- calinski_harabasz_method(clusterer_class, data, k_range, plot = plot, ...)
-  
-  # 4. Davies-Bouldin
-  cat("\n4. DAVIES-BOULDIN METHOD\n")
-  cat("----------------------------\n")
-  db_res <- davies_bouldin_method(clusterer_class, data, k_range, plot = plot, ...)
-  
-  # Summary
-  cat("\n========================================\n")
-  cat("SUMMARY OF RECOMMENDATIONS\n")
-  cat("========================================\n")
-  cat(sprintf("Elbow Method:       K = %d\n", elbow_res$suggested_k))
-  cat(sprintf("Silhouette Method:     K = %d\n", silhouette_res$suggested_k))
-  cat(sprintf("Calinski-Harabasz:      K = %d\n", ch_res$suggested_k))
-  cat(sprintf("Davies-Bouldin:         K = %d\n", db_res$suggested_k))
-  
-  # Majority vote
-  suggestions <- c(elbow_res$suggested_k, silhouette_res$suggested_k, 
-                  ch_res$suggested_k, db_res$suggested_k)
-  vote_table <- table(suggestions)
-  consensus_k <- as.numeric(names(vote_table)[which.max(vote_table)])
-  
-  cat(sprintf("\nConsensus (majority vote): K = %d\n", consensus_k))
-  cat("========================================\n")
-  
-  return(list(
-    elbow = elbow_res,
-    silhouette = silhouette_res,
-    calinski_harabasz = ch_res,
-    davies_bouldin = db_res,
-    consensus_k = consensus_k,
-    all_suggestions = suggestions
-  ))
 }

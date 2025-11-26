@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_clustering_2d}
 \alias{plot_clustering_2d}
-\title{Plot clustering results in 2D PCA space}
+\title{Plot Clustering Results in 2D PCA Space}
 \usage{
 plot_clustering_2d(
   clusterer,
@@ -12,14 +12,42 @@ plot_clustering_2d(
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object (e.g., KMeansClusterer)}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}} (e.g., \code{\link{KMeansClusterer}}).}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title. If \code{NULL} (default),
+a default title is used.}
 
-\item{show_centers}{Logical, whether to show cluster centers}
+\item{show_centers}{Logical. Whether to display cluster centers (default: \code{TRUE}).}
 
-\item{show_labels}{Logical, whether to show variable labels}
+\item{show_labels}{Logical. Whether to show variable names as labels (default: \code{TRUE}).}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot clustering results in 2D PCA space for fitted model
+Displays the clustering results by projecting variables onto the first two
+principal components of a PCA.
+}
+\details{
+This function creates a scatter plot of variables in the 2D space defined by
+the first two principal components. Variables are colored by their cluster
+assignment. If available, cluster centers are marked with asterisks.
+
+The percentage of variance explained by each PC is shown in the axis labels.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_clustering_2d(clusterer)
+}
+
+}
+\seealso{
+\code{\link{KMeansClusterer}} for creating clustering objects.
+\code{\link{plot_clustering_with_supp}} for plotting with supplementary variables.
+\code{\link{plot_cluster_quality}} for quality metrics visualization.
 }

@@ -7,12 +7,14 @@
 euclidean_distance(points, centers)
 }
 \arguments{
-\item{points}{Matrix or data frame of points (rows = observations)}
+\item{points}{Matrix or data frame of points (rows = observations, columns = features).}
 
-\item{centers}{Matrix or data frame of cluster centers}
+\item{centers}{Matrix or data frame of cluster centers (rows = centers, columns = features).
+Must have the same number of columns as \code{points}.}
 }
 \value{
-Distance matrix (rows = centers, cols = points)
+A numeric matrix of distances with dimensions \code{nrow(centers)} by \code{nrow(points)}.
+Element \code{[i, j]} contains the Euclidean distance from center \code{i} to point \code{j}.
 }
 \description{
 Calculate Euclidean distance between points and centers

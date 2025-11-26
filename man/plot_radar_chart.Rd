@@ -2,21 +2,55 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_radar_chart}
 \alias{plot_radar_chart}
-\title{Plot radar chart comparing clusters}
+\title{Plot Radar Chart of Variable-Cluster Association Strength}
 \usage{
 plot_radar_chart(
   clusterer,
-  main = "Cluster Profiles (Radar Chart)",
+  main = "Cluster Strength (Correlation with PC1)",
   standardize = TRUE
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Cluster Strength (Correlation with PC1)"}).}
 
-\item{standardize}{Logical, whether to standardize variables before plotting}
+\item{standardize}{Logical. Deprecated parameter (kept for backward compatibility).
+Correlations are always in the range 0 to 1.}
+}
+\value{
+Invisibly returns the cluster strength matrix (clusters x variables).
+Values represent absolute correlation with cluster PC1.
 }
 \description{
-Plot radar chart comparing clusters
+Creates a radar chart displaying the strength of association (correlation)
+between each variable and its cluster center (PC1).
+}
+\details{
+This function requires the \code{fmsb} package. If not available, it falls back
+to a line plot representation.
+
+\strong{Important:} Unlike classical K-Means on individuals, variable clustering uses
+standardized data where means are 0 by definition. Therefore, this function
+displays the \strong{strength of association} (|correlation| with PC1) instead of
+mean values.
+
+For each cluster, variables belonging to it will show high values (close to 1),
+while variables in other clusters will be near 0. This creates clear visual
+"peaks" showing cluster composition.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_radar_chart(clusterer)
+}
+
+}
+\seealso{
+\code{\link{plot_cluster_quality}} for cluster size and homogeneity metrics.
+\code{\link{plot_variable_contributions}} for loadings-based contributions.
 }

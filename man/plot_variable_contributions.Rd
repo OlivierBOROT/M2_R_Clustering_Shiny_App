@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_variable_contributions}
 \alias{plot_variable_contributions}
-\title{Plot variable contributions to clusters}
+\title{Plot Variable Contributions to Clusters}
 \usage{
 plot_variable_contributions(
   clusterer,
@@ -12,14 +12,45 @@ plot_variable_contributions(
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{cluster_id}{Cluster number to visualize (NULL for all clusters)}
+\item{cluster_id}{Integer. Specific cluster number to visualize, or \code{NULL}
+to display all clusters (default: \code{NULL}).}
 
-\item{top_n}{Number of top contributing variables to show}
+\item{top_n}{Integer. Number of top contributing variables to show
+(default: \code{10}).}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Variable Contributions"}).}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot variable contributions to clusters
+Displays the top contributing variables to each cluster based on PCA loadings.
+}
+\details{
+This function displays bar plots showing which variables contribute most to
+each cluster's first principal component. Contributions are measured by the
+absolute value of PCA loadings on PC1.
+
+Requires that the clusterer has a \code{get_cluster_pca()} method and a
+\code{get_cluster_homogeneity()} method.
+
+When \code{cluster_id = NULL}, creates a multi-panel plot showing all clusters.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_variable_contributions(clusterer, top_n = 5)
+}
+
+}
+\seealso{
+\code{\link{plot_cluster_quality}} for cluster quality metrics.
+\code{\link{plot_scree_by_cluster}} for variance explained per cluster.
 }

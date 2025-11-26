@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_network_graph}
 \alias{plot_network_graph}
-\title{Plot network graph of variable correlations}
+\title{Plot Network Graph of Variable Correlations}
 \usage{
 plot_network_graph(
   clusterer,
@@ -12,14 +12,43 @@ plot_network_graph(
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{threshold}{Correlation threshold for displaying edges (default 0.3)}
+\item{threshold}{Numeric. Minimum absolute correlation value for displaying
+edges (default: \code{0.3}).}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Variable Correlation Network"}).}
 
-\item{layout}{Layout algorithm: "fruchterman.reingold" (default), "circle", "kamada.kawai"}
+\item{layout}{Character string specifying the layout algorithm:
+\code{"fruchterman.reingold"} (default), \code{"circle"}, or \code{"kamada.kawai"}.}
+}
+\value{
+Invisibly returns the \code{igraph} object if \code{igraph} is available,
+otherwise \code{NULL}.
 }
 \description{
-Plot network graph of variable correlations
+Creates a network graph where nodes represent variables and edges represent
+correlations above a specified threshold.
+}
+\details{
+This function requires the \code{igraph} package. If not available, it falls back
+to a simple bar plot showing the number of connections per variable.
+
+Nodes are colored by cluster assignment. Edges are drawn only for correlations
+with absolute value exceeding \code{threshold}.
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_network_graph(clusterer, threshold = 0.4, layout = "circle")
+}
+
+}
+\seealso{
+\code{\link{plot_correlation_heatmap}} for heatmap-based correlation visualization.
+\code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
 }

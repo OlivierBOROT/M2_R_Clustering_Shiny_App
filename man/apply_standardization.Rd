@@ -7,15 +7,21 @@
 apply_standardization(data, centers, scales)
 }
 \arguments{
-\item{data}{A data frame or matrix to standardize}
+\item{data}{A data frame or matrix to standardize.}
 
-\item{centers}{Numeric vector of centers (means) from training data}
+\item{centers}{Numeric vector of centers (means) from training data.
+If \code{NULL}, no centering is applied.}
 
-\item{scales}{Numeric vector of scales (standard deviations) from training data}
+\item{scales}{Numeric vector of scales (standard deviations) from training data.
+If \code{NULL}, no scaling is applied.}
 }
 \value{
-Standardized data frame
+A standardized data frame. If both \code{centers} and \code{scales}
+are \code{NULL}, returns the data unchanged.
 }
 \description{
 Apply standardization using pre-computed parameters
+}
+\seealso{
+\code{\link{standardize_data}} to compute parameters and standardize.
 }

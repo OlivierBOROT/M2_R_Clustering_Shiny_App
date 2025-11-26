@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_correlation_heatmap}
 \alias{plot_correlation_heatmap}
-\title{Plot heatmap of correlations by cluster}
+\title{Plot Heatmap of Correlations by Cluster}
 \usage{
 plot_correlation_heatmap(
   clusterer,
@@ -11,12 +11,41 @@ plot_correlation_heatmap(
 )
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Correlation Heatmap by Cluster"}).}
 
-\item{reorder}{Logical, whether to reorder variables by cluster}
+\item{reorder}{Logical. Whether to reorder variables by cluster assignment
+(default: \code{TRUE}).}
+}
+\value{
+Invisibly returns \code{NULL}. The function is called for its side effect
+of creating a plot.
 }
 \description{
-Plot heatmap of correlations by cluster
+Creates a heatmap of the correlation matrix, optionally reordered by cluster
+assignment to highlight within-cluster relationships.
+}
+\details{
+This function computes the correlation matrix of all variables and displays it
+as a heatmap. When \code{reorder = TRUE}, variables are sorted by cluster,
+and black lines separate the clusters visually.
+
+Colors range from blue (negative correlation) through white (no correlation)
+to red (positive correlation).
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_correlation_heatmap(clusterer, reorder = TRUE)
+}
+
+}
+\seealso{
+\code{\link{plot_network_graph}} for network-based correlation visualization.
+\code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
 }

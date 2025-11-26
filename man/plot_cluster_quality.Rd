@@ -2,15 +2,51 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_cluster_quality}
 \alias{plot_cluster_quality}
-\title{Plot cluster sizes and quality metrics}
+\title{Plot Cluster Sizes and Quality Metrics}
 \usage{
 plot_cluster_quality(clusterer, main = "Cluster Quality Metrics")
 }
 \arguments{
-\item{clusterer}{A fitted clustering object}
+\item{clusterer}{A fitted clustering object inheriting from
+\code{\link{BaseClusterer}}.}
 
-\item{main}{Title of the plot}
+\item{main}{Character string for the plot title
+(default: \code{"Cluster Quality Metrics"}).}
+}
+\value{
+Invisibly returns a list with two components:
+\item{sizes}{Integer vector of cluster sizes (number of variables per cluster).}
+\item{homogeneity}{Numeric vector of cluster homogeneity values, or \code{NULL}
+if not available.}
 }
 \description{
-Plot cluster sizes and quality metrics
+Creates bar plots showing cluster sizes and, if available, cluster homogeneity
+(variance explained by the first principal component).
+}
+\details{
+If the clusterer has a \code{get_cluster_homogeneity()} method, this function
+creates a two-panel plot showing:
+\itemize{
+\item Left panel: Number of variables per cluster
+\item Right panel: Homogeneity per cluster with mean line
+}
+
+Otherwise, only cluster sizes are displayed.
+
+Homogeneity measures how well the first principal component explains variance
+within each cluster (higher values indicate more homogeneous clusters).
+}
+\examples{
+\dontrun{
+data <- data.frame(matrix(rnorm(500), ncol = 5))
+clusterer <- KMeansClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+metrics <- plot_cluster_quality(clusterer)
+print(metrics$sizes)
+}
+
+}
+\seealso{
+\code{\link{plot_variable_contributions}} for within-cluster variable importance.
+\code{\link{plot_scree_by_cluster}} for detailed variance decomposition.
 }
