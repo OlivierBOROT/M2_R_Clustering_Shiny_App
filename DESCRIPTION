@@ -23,5 +23,6 @@ Suggests:
     fmsb,
     igraph,
     FactoMineR,
-    fmsb,
+    ggplot2
+VignetteBuilder: knitr
 Config/testthat/edition: 3

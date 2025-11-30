@@ -98,7 +98,7 @@ inertia <- clusterer$get_inertia()
 
 }
 \section{Super class}{
-\code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{DivisiveClusterer}
+\code{M2RClust::BaseClusterer} -> \code{DivisiveClusterer}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -155,6 +155,8 @@ inertia <- clusterer$get_inertia()
 \item \href{#method-DivisiveClusterer-plot_split_dendrogram}{\code{DivisiveClusterer$plot_split_dendrogram()}}
 \item \href{#method-DivisiveClusterer-get_split_details}{\code{DivisiveClusterer$get_split_details()}}
 \item \href{#method-DivisiveClusterer-get_hierarchy_tree}{\code{DivisiveClusterer$get_hierarchy_tree()}}
+\item \href{#method-DivisiveClusterer-get_plot_data}{\code{DivisiveClusterer$get_plot_data()}}
+\item \href{#method-DivisiveClusterer-get_plot_data_predict}{\code{DivisiveClusterer$get_plot_data_predict()}}
 \item \href{#method-DivisiveClusterer-clone}{\code{DivisiveClusterer$clone()}}
 }
 }
@@ -446,6 +448,32 @@ Get hierarchy tree structure for external visualization
 
 \subsection{Returns}{
 List representing the split tree
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DivisiveClusterer-get_plot_data"></a>}}
+\if{latex}{\out{\hypertarget{method-DivisiveClusterer-get_plot_data}{}}}
+\subsection{Method \code{get_plot_data()}}{
+Prepare data for the 2D correlation circle plot (compatibility with plot_clustering_2d).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DivisiveClusterer$get_plot_data()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list with coords, colors, pca, and centers for visualization.
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DivisiveClusterer-get_plot_data_predict"></a>}}
+\if{latex}{\out{\hypertarget{method-DivisiveClusterer-get_plot_data_predict}{}}}
+\subsection{Method \code{get_plot_data_predict()}}{
+Prepare data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DivisiveClusterer$get_plot_data_predict()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+A list with coords, colors, pca, and centers for visualization.
 }
 }
 \if{html}{\out{<hr>}}

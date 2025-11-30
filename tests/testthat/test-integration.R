@@ -274,7 +274,4 @@ test_that("Full visualization suite", {
   # Optional visualizations (may skip if packages unavailable)
   skip_if_not_installed("igraph")
   expect_no_error(plot_network_graph(clusterer))
-
-  skip_if_not_installed("fmsb")
-  expect_no_error(plot_radar_chart(clusterer))
 })

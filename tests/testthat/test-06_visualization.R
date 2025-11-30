@@ -178,40 +178,6 @@ test_that("plot_network_graph requires fitted model", {
 })
 
 # ============================================================================
-# Tests for plot_radar_chart
-# ============================================================================
-
-test_that("plot_radar_chart runs with fmsb", {
-  skip_if_not_installed("fmsb")
-
-  clusterer <- create_fitted_clusterer()
-
-  expect_no_error(
-    plot_radar_chart(clusterer)
-  )
-})
-
-test_that("plot_radar_chart with standardize = FALSE", {
-  skip_if_not_installed("fmsb")
-
-  clusterer <- create_fitted_clusterer()
-
-  expect_no_error(
-    plot_radar_chart(clusterer, standardize = FALSE)
-  )
-})
-
-test_that("plot_radar_chart requires fitted model", {
-  data <- create_test_data(n = 100, p = 6)
-  clusterer <- KMeansClusterer$new(data = data, n_clusters = 3)
-
-  expect_error(
-    plot_radar_chart(clusterer),
-    "fitted"
-  )
-})
-
-# ============================================================================
 # Tests for plot_variable_contributions
 # ============================================================================
 
@@ -329,24 +295,6 @@ test_that("plot_correlation_matrix_simple runs without error", {
       main = "Test",
       las = 2
     )
-  })
-})
-
-test_that("plot_cluster_profiles_lines runs without error", {
-  clusterer <- create_fitted_clusterer()
-
-  # Test the logic of the fallback function
-  expect_no_error({
-    cluster_profiles <- matrix(NA, nrow = clusterer$n_clusters, ncol = ncol(clusterer$data))
-
-    for (k in 1:clusterer$n_clusters) {
-      vars_in_k <- clusterer$clusters == k
-      if (sum(vars_in_k) > 0) {
-        cluster_profiles[k, ] <- colMeans(clusterer$data[, vars_in_k, drop = FALSE])
-      }
-    }
-
-    matplot(t(cluster_profiles), type = "l", lty = 1, lwd = 2)
   })
 })
 

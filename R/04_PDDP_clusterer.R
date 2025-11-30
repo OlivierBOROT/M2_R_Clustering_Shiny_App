@@ -489,7 +489,10 @@ DivisiveClusterer <- R6::R6Class(
     #' @return Numeric value (weighted average homogeneity)
     get_homogeneity = function() {
       private$check_fitted()
-      return(weighted.mean(self$cluster_homogeneity, table(self$clusters)))
+      # FIX: Use tabulate to handle empty clusters correctly
+      # table() drops levels with 0 count, causing a length mismatch with cluster_homogeneity
+      cluster_sizes <- tabulate(self$clusters, nbins = self$n_clusters)
+      return(weighted.mean(self$cluster_homogeneity, cluster_sizes))
     },
 
     #' @description
@@ -711,6 +714,93 @@ DivisiveClusterer <- R6::R6Class(
       )
 
       return(tree)
+    },
+
+    #' @description
+    #' Prepare data for the 2D correlation circle plot (compatibility with plot_clustering_2d).
+    #' @return A list with coords, colors, pca, and centers for visualization.
+    get_plot_data = function() {
+      private$check_fitted()
+
+      # 1. Compute Global PCA (for visualization context)
+      if (self$use_fast_path) {
+        # Numeric path: use prcomp
+        pca <- prcomp(self$data, scale. = self$standardize)
+
+        # Calculate coordinates (correlations with PCA axes)
+        # Loadings scaled by sqrt(eigenvalue) give correlations
+        coords <- t(t(pca$rotation[, 1:2]) * pca$sdev[1:2])
+      } else {
+        # Mixed path: use PCAmix
+        if (!requireNamespace("PCAmixdata", quietly = TRUE)) {
+          warning("PCAmixdata required for plotting mixed data")
+          return(NULL)
+        }
+
+        split_res <- PCAmixdata::splitmix(self$data)
+        pca <- PCAmixdata::PCAmix(
+          X.quanti = split_res$X.quanti,
+          X.quali = split_res$X.quali,
+          ndim = 2,
+          graph = FALSE
+        )
+
+        # For mixed data, use squared loadings for visualization
+        if (!is.null(pca$sqload)) {
+          # sqload contains squared correlations for all variables
+          coords <- sqrt(pca$sqload[, 1:2, drop = FALSE])
+          # Apply sign from quanti.cor if available
+          if (!is.null(pca$quanti.cor)) {
+            quanti_vars <- rownames(pca$quanti.cor)
+            for (v in quanti_vars) {
+              if (v %in% rownames(coords)) {
+                coords[v, ] <- coords[v, ] * sign(pca$quanti.cor[v, 1:2])
+              }
+            }
+          }
+        } else if (!is.null(pca$quanti.cor)) {
+          coords <- pca$quanti.cor[, 1:2, drop = FALSE]
+        } else {
+          # Fallback: zero coordinates
+          coords <- matrix(0, nrow = ncol(self$data), ncol = 2)
+          rownames(coords) <- self$variable_names
+        }
+      }
+
+      # Build coordinates data frame
+      coords_df <- as.data.frame(coords)
+      colnames(coords_df) <- c("PC1", "PC2")
+      coords_df$variable <- rownames(coords_df)
+      if (is.null(coords_df$variable)) {
+        coords_df$variable <- self$variable_names
+      }
+      coords_df$cluster <- factor(self$clusters[match(coords_df$variable, self$variable_names)])
+
+      # Calculate cluster centers (centroids in PCA space)
+      centers_list <- by(coords_df[, c("PC1", "PC2")], coords_df$cluster, colMeans)
+      centers <- do.call(rbind, centers_list)
+      rownames(centers) <- paste0("C", rownames(centers))
+
+      # Colors for clusters
+      n_actual_clusters <- length(unique(self$clusters))
+      cluster_colors <- rainbow(n_actual_clusters)
+
+      return(list(
+        coords = coords_df,
+        colors = cluster_colors,
+        pca = pca,
+        centers = centers
+      ))
+    },
+
+    #' @description
+    #' Prepare data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
+    #' @return A list with coords, colors, pca, and centers for visualization.
+    get_plot_data_predict = function() {
+      # For DivisiveClusterer, we don't store prediction coords separately
+
+      # Return the basic plot data (supplementary vars would need separate handling)
+      return(self$get_plot_data())
     }
   ),
   private = list(

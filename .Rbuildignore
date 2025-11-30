@@ -4,3 +4,5 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^R/kmeans_abstrait\.R$
+^doc$
+^Meta$

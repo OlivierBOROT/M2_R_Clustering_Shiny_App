@@ -1291,7 +1291,7 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
       cat(sprintf("  - Iterations (best run): %d / %d\n", private$n_iterations, self$max_iter))
       cat(sprintf("  - Tolerance: %.2e\n\n", self$tol))
 
-      cat("Clustering Quality (Homogeneity Criterion):\n")
+      # cat("Clustering Quality (Homogeneity Criterion):\n")
       cat(sprintf("  - Global homogeneity: %.3f\n", private$global_homogeneity))
       cat("  - Interpretation: Proportion of variance explained by PC1 within clusters\n")
       cat("  - Range: [0, 1] where 1 = perfect homogeneity\n\n")
