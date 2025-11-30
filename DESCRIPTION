@@ -16,8 +16,8 @@ Imports:
     R6,
     PCAmixdata,
     cluster,
-    Shiny,
-    shinyDashboard,
+    shiny,
+    shinydashboard,
     DT,
     readxl,
     igraph
