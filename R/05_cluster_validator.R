@@ -247,7 +247,7 @@ calinski_harabasz_method <- function(clusterer_class, data, k_range = 2:10, plot
     k <- k_range[i]
     cat(sprintf("  K = %d...\n", k))
     
-    # 1. Fit le modèle
+    # 1. Fit the model
     clusterer <- clusterer_class$new(data = data, n_clusters = k, ...)
     clusterer$fit()
     

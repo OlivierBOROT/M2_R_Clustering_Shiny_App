@@ -15,8 +15,9 @@ plot_network_graph(
 \item{clusterer}{A fitted clustering object inheriting from
 \code{\link{BaseClusterer}}.}
 
-\item{threshold}{Numeric. Minimum absolute correlation value for displaying
-edges (default: \code{0.3}).}
+\item{threshold}{Numeric. Minimum association value (0 to 1) for displaying
+edges (default: \code{0.3}). For mixed data, this applies to the square root
+of the association measure (R², η², Cramér's V²).}
 
 \item{main}{Character string for the plot title
 (default: \code{"Variable Correlation Network"}).}
@@ -30,14 +31,23 @@ otherwise \code{NULL}.
 }
 \description{
 Creates a network graph where nodes represent variables and edges represent
-correlations above a specified threshold.
+correlations (or associations) above a specified threshold.
+Supports quantitative, qualitative, and mixed data.
 }
 \details{
 This function requires the \code{igraph} package. If not available, it falls back
 to a simple bar plot showing the number of connections per variable.
 
-Nodes are colored by cluster assignment. Edges are drawn only for correlations
-with absolute value exceeding \code{threshold}.
+Nodes are colored by cluster assignment. Edges are drawn only for associations
+with value exceeding \code{threshold}.
+
+For mixed data, association is computed using:
+\itemize{
+\item Pearson R² for numeric-numeric pairs
+\item η² (eta-squared) for numeric-factor pairs
+\item Cramér's V² for factor-factor pairs
+}
+The threshold applies to the square root of these measures (scale 0-1).
 }
 \examples{
 \dontrun{
@@ -51,4 +61,5 @@ plot_network_graph(clusterer, threshold = 0.4, layout = "circle")
 \seealso{
 \code{\link{plot_correlation_heatmap}} for heatmap-based correlation visualization.
 \code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
+\code{\link{get_correlation_distance_matrix}} for the underlying distance computation.
 }

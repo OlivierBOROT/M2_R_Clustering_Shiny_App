@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_clustering_2d}
 \alias{plot_clustering_2d}
-\title{Plot Clustering Results in 2D PCA Space}
+\title{Plot Clustering Results in 2D PCA Space (Correlation Circle)}
 \usage{
 plot_clustering_2d(
   clusterer,
@@ -27,15 +27,18 @@ Invisibly returns \code{NULL}. The function is called for its side effect
 of creating a plot.
 }
 \description{
-Displays the clustering results by projecting variables onto the first two
-principal components of a PCA.
+Displays the clustering results by projecting variables as vectors onto the first two
+principal components of a PCA. Ideally suited for variable clustering.
 }
 \details{
-This function creates a scatter plot of variables in the 2D space defined by
-the first two principal components. Variables are colored by their cluster
-assignment. If available, cluster centers are marked with asterisks.
+This function creates a correlation circle where variables are represented as vectors
+(arrows) starting from the origin. The length and direction of each arrow indicate
+the strength and nature of the variable's representation in the 2D PCA space.
+Variables are colored by their cluster assignment.
 
+The unit circle helps identify well-represented variables (arrows reaching near the circle).
 The percentage of variance explained by each PC is shown in the axis labels.
+The aspect ratio is fixed (asp=1) to preserve angular relationships.
 }
 \examples{
 \dontrun{

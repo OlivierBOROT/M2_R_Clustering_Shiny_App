@@ -13,13 +13,15 @@ LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Imports:
-    R6
+    R6,
+    PCAmixdata,
+    cluster
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
-    cluster,
     fmsb,
     igraph,
-    FactoMineR
+    FactoMineR,
+    fmsb,
 Config/testthat/edition: 3

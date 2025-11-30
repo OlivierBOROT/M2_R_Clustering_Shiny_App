@@ -2,7 +2,7 @@
 % Please edit documentation in R/06_visualization.R
 \name{plot_clustering_with_supp}
 \alias{plot_clustering_with_supp}
-\title{Plot Clustering Results wit  h Supplementary Variables}
+\title{Plot Clustering Results with Supplementary Variables (Correlation Circle)}
 \usage{
 plot_clustering_with_supp(
   clusterer,
@@ -31,9 +31,12 @@ Displays clustering results distinguishing between active variables (used for
 clustering) and supplementary variables (projected after clustering).
 }
 \details{
-This function creates a scatter plot in 2D PCA space where active variables
-(circles) and supplementary variables (triangles) are distinguished by shape.
+This function creates a correlation circle where active variables (solid arrows)
+and supplementary variables (dashed arrows) are distinguished by line style.
 All variables are colored by their cluster assignment.
+
+Active variables are displayed in bold font, supplementary variables in italic.
+The aspect ratio is fixed (asp=1) to preserve angular relationships.
 
 Requires that \code{predict()} has been called on the clusterer object first.
 }

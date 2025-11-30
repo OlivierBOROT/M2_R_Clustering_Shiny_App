@@ -5,10 +5,10 @@
 NULL
 
 
-#' Plot Clustering Results in 2D PCA Space
+#' Plot Clustering Results in 2D PCA Space (Correlation Circle)
 #' 
-#' Displays the clustering results by projecting variables onto the first two
-#' principal components of a PCA.
+#' Displays the clustering results by projecting variables as vectors onto the first two
+#' principal components of a PCA. Ideally suited for variable clustering.
 #' 
 #' @param clusterer A fitted clustering object inheriting from
 #'   \code{\link{BaseClusterer}} (e.g., \code{\link{KMeansClusterer}}).
@@ -21,11 +21,14 @@ NULL
 #'   of creating a plot.
 #' 
 #' @details
-#' This function creates a scatter plot of variables in the 2D space defined by
-#' the first two principal components. Variables are colored by their cluster
-#' assignment. If available, cluster centers are marked with asterisks.
+#' This function creates a correlation circle where variables are represented as vectors
+#' (arrows) starting from the origin. The length and direction of each arrow indicate
+#' the strength and nature of the variable's representation in the 2D PCA space.
+#' Variables are colored by their cluster assignment.
 #' 
+#' The unit circle helps identify well-represented variables (arrows reaching near the circle).
 #' The percentage of variance explained by each PC is shown in the axis labels.
+#' The aspect ratio is fixed (asp=1) to preserve angular relationships.
 #' 
 #' @seealso
 #' \code{\link{KMeansClusterer}} for creating clustering objects.
@@ -59,64 +62,74 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
   pca <- plot_data$pca
   centers <- plot_data$centers
   
-  # default title
+# Default title
   if (is.null(main)) {
-    main <- "Clustering Results in 2D PCA Space"
+    main <- "Correlation Circle"
   }
   
   # % variance explained calculation
+  var_exp_1 <- 0; var_exp_2 <- 0
   if (!is.null(pca)) {
-    var_exp_1 <- round(summary(pca)$importance[2,1]*100, 1)
-    var_exp_2 <- round(summary(pca)$importance[2,2]*100, 1)
-    xlab <- paste0("PC1 (", var_exp_1, "%)")
-    ylab <- paste0("PC2 (", var_exp_2, "%)")
-  } else {
-    xlab <- "Dim 1"
-    ylab <- "Dim 2"
+    if (inherits(pca, "prcomp")) {
+      ve <- summary(pca)$importance[2,] * 100
+      var_exp_1 <- round(ve[1], 1)
+      var_exp_2 <- round(ve[2], 1)
+    } else { # PCAmix
+      ve <- pca$eig[, 2]
+      var_exp_1 <- round(ve[1], 1)
+      var_exp_2 <- round(ve[2], 1)
+    }
   }
+  xlab <- paste0("Dim 1 (", var_exp_1, "%)")
+  ylab <- paste0("Dim 2 (", var_exp_2, "%)")
   
-  # Base plot
-  plot(coords$PC1, coords$PC2,
-       col = cluster_colors[coords$cluster],
-       pch = 19,
-       main = main,
-       xlab = xlab,
-       ylab = ylab,
-       las = 1)
+  # --- INIT PLOT (Frame [-1, 1]) ---
+  # asp=1 is CRUCIAL so that angles are visually correct
+  plot(0, 0, type = "n", xlim = c(-1.1, 1.1), ylim = c(-1.1, 1.1),
+       xlab = xlab, ylab = ylab, main = main, las = 1, asp = 1)
   
-  # Labels
+  # Unit circle and axes
+  symbols(0, 0, circles = 1, inches = FALSE, add = TRUE, fg = "gray60")
+  abline(h = 0, v = 0, col = "gray80", lty = 2)
+  
+  # Colors
+  cols <- cluster_colors[coords$cluster]
+  
+  # --- DRAW ARROWS (Variables) ---
+  arrows(x0 = 0, y0 = 0, 
+         x1 = coords$PC1, y1 = coords$PC2, 
+         col = cols, length = 0.1, lwd = 1.5)
+  
+  # --- LABELS ---
   if (show_labels && !is.null(coords$variable)) {
-    text(coords$PC1, coords$PC2, 
+    # Slight offset for readability (x 1.15)
+    text(coords$PC1 * 1.15, coords$PC2 * 1.15, 
          labels = coords$variable, 
-         pos = 3, cex = 0.8)
+         col = cols, cex = 0.8, font = 2)
   }
   
-  # Cluster centers
+  # --- CLUSTER CENTERS ---
   if (show_centers && !is.null(centers)) {
-    # CORRECTION : Les centres sont déjà en coordonnées 2D (PC1, PC2) calculés par KMeansClusterer
-    # Pas de projection supplémentaire nécessaire (erreur "non-conformable arguments" sinon)
-    centers_pca <- as.matrix(centers)
-    points(centers_pca[, 1], centers_pca[, 2], 
-           pch = 8, col = "black", cex = 2, lwd = 2)
-    text(centers_pca[, 1], centers_pca[, 2], 
-         labels = paste0("C", seq_len(nrow(centers))), 
-         pos = 1, cex = 0.9, col = "black", font = 2)
+    # Display centers as solid points
+    # Note: Assumes centers is a matrix with PC1/PC2
+    points(centers[, 1], centers[, 2], 
+           pch = 22, bg = "white", col = "black", cex = 2, lwd = 2)
+    text(centers[, 1], centers[, 2], 
+         labels = gsub("C", "", rownames(centers)),
+         col = "black", font = 2, cex = 0.8)
   }
   
   # Legend
-  legend("topright", 
-         legend = c(paste("Cluster", seq_along(unique(coords$cluster))), 
-                    if(show_centers) "Centers" else NULL),
-         col = c(cluster_colors, if(show_centers) "black" else NULL),
-         pch = c(rep(19, length(unique(coords$cluster))), 
-                 if(show_centers) 8 else NULL),
-         cex = 0.8)
+  legend("topleft", 
+         legend = paste("Cluster", levels(coords$cluster)),
+         col = cluster_colors[1:length(levels(coords$cluster))],
+         lwd = 2, bty = "n", cex = 0.8, title = "Groups")
   
   invisible(NULL)
 }
 
 
-#' Plot Clustering Results wit  h Supplementary Variables
+#' Plot Clustering Results with Supplementary Variables (Correlation Circle)
 #' 
 #' Displays clustering results distinguishing between active variables (used for
 #' clustering) and supplementary variables (projected after clustering).
@@ -132,9 +145,12 @@ plot_clustering_2d <- function(clusterer, main = NULL, show_centers = TRUE, show
 #'   of creating a plot.
 #' 
 #' @details
-#' This function creates a scatter plot in 2D PCA space where active variables
-#' (circles) and supplementary variables (triangles) are distinguished by shape.
+#' This function creates a correlation circle where active variables (solid arrows)
+#' and supplementary variables (dashed arrows) are distinguished by line style.
 #' All variables are colored by their cluster assignment.
+#' 
+#' Active variables are displayed in bold font, supplementary variables in italic.
+#' The aspect ratio is fixed (asp=1) to preserve angular relationships.
 #' 
 #' Requires that \code{predict()} has been called on the clusterer object first.
 #' 
@@ -173,53 +189,66 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
   
   # Default title
   if (is.null(main)) {
-    main <- "Clusters with supplementary variables"
+    main <- "Active & Supplementary Variables"
   }
   
   # % variance explained calculation
+  var_exp_1 <- 0; var_exp_2 <- 0
   if (!is.null(pca)) {
-    var_exp_1 <- round(summary(pca)$importance[2,1]*100, 1)
-    var_exp_2 <- round(summary(pca)$importance[2,2]*100, 1)
-    xlab <- paste0("PC1 (", var_exp_1, "%)")
-    ylab <- paste0("PC2 (", var_exp_2, "%)")
-  } else {
-    xlab <- "Dim 1"
-    ylab <- "Dim 2"
+    if (inherits(pca, "prcomp")) {
+      ve <- summary(pca)$importance[2,] * 100
+      var_exp_1 <- round(ve[1], 1)
+      var_exp_2 <- round(ve[2], 1)
+    } else { # PCAmix
+      ve <- pca$eig[, 2]
+      var_exp_1 <- round(ve[1], 1)
+      var_exp_2 <- round(ve[2], 1)
+    }
   }
   
-  # Plot with different symbols for active/supplementary variables
-  plot(coords_all$PC1, coords_all$PC2,
-       col = cluster_colors[coords_all$cluster],
-       pch = ifelse(coords_all$type == "active", 19, 17),
-       main = main,
-       xlab = xlab,
-       ylab = ylab,
-       las = 1)
+  # --- INIT PLOT ---
+  plot(0, 0, type = "n", xlim = c(-1.1, 1.1), ylim = c(-1.1, 1.1),
+       xlab = paste0("Dim 1 (", var_exp_1, "%)"), 
+       ylab = paste0("Dim 2 (", var_exp_2, "%)"), 
+       main = main, las = 1, asp = 1)
   
-  # Labels
-  if (show_labels && !is.null(coords_all$variable)) {
-    text(coords_all$PC1, coords_all$PC2, 
+  symbols(0, 0, circles = 1, inches = FALSE, add = TRUE, fg = "gray60")
+  abline(h = 0, v = 0, col = "gray80", lty = 2)
+  
+  # --- DRAWING ---
+  # Separate active and supplementary for line style
+  cols <- cluster_colors[coords_all$cluster]
+  line_types <- ifelse(coords_all$type == "active", 1, 2) # 1=Solid, 2=Dashed
+  line_widths <- ifelse(coords_all$type == "active", 1.5, 1.2)
+  
+  arrows(x0 = 0, y0 = 0, 
+         x1 = coords_all$PC1, y1 = coords_all$PC2, 
+         col = cols, 
+         lty = line_types, # Solid vs dashed
+         lwd = line_widths,
+         length = 0.1)
+  
+  if (show_labels) {
+    text(coords_all$PC1 * 1.15, coords_all$PC2 * 1.15, 
          labels = coords_all$variable, 
-         pos = 3, cex = 0.8)
+         col = cols, cex = 0.8, font = ifelse(coords_all$type == "active", 2, 3)) # Bold vs Italic
   }
   
   # Centers
   if (show_centers && !is.null(centers)) {
-    centers_pca <- as.matrix(centers)
-    points(centers_pca[, 1], centers_pca[, 2], 
-           pch = 8, col = "black", cex = 2, lwd = 2)
-    text(centers_pca[, 1], centers_pca[, 2], 
-         labels = paste0("C", seq_len(nrow(centers))), 
-         pos = 1, cex = 0.9, col = "black", font = 2)
+    points(centers[, 1], centers[, 2], pch = 22, bg = "white", col = "black", cex = 2, lwd = 2)
+    text(centers[, 1], centers[, 2], labels = gsub("C", "", rownames(centers)), col = "black", font = 2, cex = 0.8)
   }
   
-  # LLegend
-  legend("topright", 
-         legend = c("Active variables", "Supplementary variables", 
-                    if(show_centers) "Centers" else NULL),
-         pch = c(19, 17, if(show_centers) 8 else NULL), 
-         col = c("black", "black", if(show_centers) "black" else NULL),
-         cex = 0.8)
+  # Enhanced legend
+  legend("topleft", 
+         legend = c("Active (Training)", "Supplementary (Predict)"),
+         lty = c(1, 2), lwd = 2, col = "black", bty = "n", cex = 0.8)
+  
+  legend("bottomleft", 
+         legend = paste("Cluster", levels(coords_all$cluster)),
+         fill = cluster_colors[1:length(levels(coords_all$cluster))],
+         bty = "n", cex = 0.8)
   
   invisible(NULL)
 }
@@ -228,21 +257,38 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
 #' Plot Dendrogram for Hierarchical Clustering
 #' 
 #' Creates a dendrogram visualization for hierarchical clustering methods.
+#' For DivisiveClusterer, displays the split history as a top-down tree.
 #' 
-#' @param clusterer A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}).
+#' @param clusterer A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}
+#'   or \code{DivisiveClusterer}).
 #' @param main Character string for the plot title (default: \code{"Dendrogram"}).
-#' @param ... Additional parameters passed to \code{plot()}.
+#' @param ... Additional parameters passed to \code{plot()} or the clusterer's
+#'   specific dendrogram method.
 #' 
 #' @return Invisibly returns \code{NULL}. The function is called for its side effect
 #'   of creating a plot.
 #' 
 #' @details
-#' This function is currently a placeholder and will be implemented according to
-#' the structure of \code{MCA_HClusterer}. It requires hierarchical clustering
-#' results stored in the clusterer object.
+#' This function automatically detects the clusterer type:
+#' \itemize{
+#'   \item For \code{DivisiveClusterer}: Calls its \code{plot_split_dendrogram()} method
+#'     which displays a top-down tree showing the split history.
+#'   \item For other hierarchical methods: Will use standard dendrogram plotting
+#'     (implementation depends on the specific clusterer structure).
+#' }
 #' 
 #' @seealso
+#' \code{\link{DivisiveClusterer}} for divisive clustering.
 #' \code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
+#' 
+#' @examples
+#' \dontrun{
+#' # For DivisiveClusterer
+#' data <- data.frame(matrix(rnorm(1000), ncol = 10))
+#' clusterer <- DivisiveClusterer$new(data, n_clusters = 3)
+#' clusterer$fit()
+#' plot_dendrogram(clusterer)
+#' }
 #' 
 #' @export
 plot_dendrogram <- function(clusterer, main = "Dendrogram", ...) {
@@ -250,10 +296,21 @@ plot_dendrogram <- function(clusterer, main = "Dendrogram", ...) {
   if (!clusterer$fitted) {
     stop("Model must be fitted before plotting. Call fit() first.")
   }
-
-  # TODO: Implement according to the structure of MCA_HClusterer
-  # For now, placeholder
-  stop("plot_dendrogram() not yet implemented for this clustering method")
+  
+  # Check if it's a DivisiveClusterer - use its specialized tree plot
+  if (inherits(clusterer, "DivisiveClusterer")) {
+    return(clusterer$plot_split_dendrogram(main = main, ...))
+  }
+  
+  # Check if clusterer has an hclust object (for MCA_HClusterer or similar)
+  if (!is.null(clusterer$hclust_result)) {
+    plot(clusterer$hclust_result, main = main, ...)
+    return(invisible(NULL))
+  }
+  
+  # Fallback for other methods
+  stop("plot_dendrogram() not yet implemented for this clustering method. ",
+       "The clusterer must be a DivisiveClusterer or have an hclust_result field.")
 }
 
 
@@ -299,8 +356,14 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
     stop("Model must be fitted before plotting. Call fit() first.")
   }
   
-  # correlation matrix calculation
-  cor_matrix <- cor(clusterer$data)
+  # Use mixed-data compatible distance matrix
+  dist_obj <- get_correlation_distance_matrix(clusterer$data)
+  dist_mat <- as.matrix(dist_obj)
+  
+  # Convert Distance back to Association (Similarity)
+  # d = sqrt(2 * (1 - sim))  =>  sim = 1 - (d^2) / 2
+  # Note: 'sim' here is on the squared scale (R², η², Cramér's V²)
+  cor_matrix <- 1 - (dist_mat^2) / 2
   
   # Reorder by clusters
   if (reorder) {
@@ -342,12 +405,14 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
 #' Plot Network Graph of Variable Correlations
 #' 
 #' Creates a network graph where nodes represent variables and edges represent
-#' correlations above a specified threshold.
+#' correlations (or associations) above a specified threshold.
+#' Supports quantitative, qualitative, and mixed data.
 #' 
 #' @param clusterer A fitted clustering object inheriting from
 #'   \code{\link{BaseClusterer}}.
-#' @param threshold Numeric. Minimum absolute correlation value for displaying
-#'   edges (default: \code{0.3}).
+#' @param threshold Numeric. Minimum association value (0 to 1) for displaying
+#'   edges (default: \code{0.3}). For mixed data, this applies to the square root
+#'   of the association measure (R², η², Cramér's V²).
 #' @param main Character string for the plot title
 #'   (default: \code{"Variable Correlation Network"}).
 #' @param layout Character string specifying the layout algorithm:
@@ -360,12 +425,21 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
 #' This function requires the \code{igraph} package. If not available, it falls back
 #' to a simple bar plot showing the number of connections per variable.
 #' 
-#' Nodes are colored by cluster assignment. Edges are drawn only for correlations
-#' with absolute value exceeding \code{threshold}.
+#' Nodes are colored by cluster assignment. Edges are drawn only for associations
+#' with value exceeding \code{threshold}.
+#' 
+#' For mixed data, association is computed using:
+#' \itemize{
+#'   \item Pearson R² for numeric-numeric pairs
+#'   \item η² (eta-squared) for numeric-factor pairs
+#'   \item Cramér's V² for factor-factor pairs
+#' }
+#' The threshold applies to the square root of these measures (scale 0-1).
 #' 
 #' @seealso
 #' \code{\link{plot_correlation_heatmap}} for heatmap-based correlation visualization.
 #' \code{\link{plot_clustering_2d}} for PCA-based clustering visualization.
+#' \code{\link{get_correlation_distance_matrix}} for the underlying distance computation.
 #' 
 #' @examples
 #' \dontrun{
@@ -389,11 +463,25 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
     return(plot_correlation_matrix_simple(clusterer, threshold, main))
   }
   
-  # Calculate correlation matrix
-  cor_matrix <- cor(clusterer$data)
+  # --- MIXED DATA SUPPORT ---
+  # Calculate association matrix using get_correlation_distance_matrix (handles mixed types)
+  # 1. Get distance matrix: d = sqrt(2 * (1 - sim))
+  dist_obj <- get_correlation_distance_matrix(clusterer$data)
+  dist_mat <- as.matrix(dist_obj)
   
-  # Create adjacency matrix (correlations > threshold)
-  adj_matrix <- abs(cor_matrix) > threshold
+  # 2. Convert distance back to association (similarity)
+  # d = sqrt(2 * (1 - sim))  =>  sim = 1 - (d^2) / 2
+  # Note: 'sim' here is on the squared scale (R², η², Cramér's V²)
+  assoc_sq <- 1 - (dist_mat^2) / 2
+  
+  # 3. Take sqrt to make it comparable to a standard correlation (0-1 scale)
+  # Handle potential negative zeros from float arithmetic WITHOUT FLATTENING MATRIX
+  # Note: pmax() would flatten the matrix to a vector, so we use subsetting instead
+  assoc_sq[assoc_sq < 0] <- 0
+  assoc_matrix <- sqrt(assoc_sq)
+  
+  # 4. Create adjacency matrix (associations > threshold)
+  adj_matrix <- assoc_matrix > threshold
   diag(adj_matrix) <- FALSE  # No self-loops
   
   # Create graph
@@ -421,7 +509,7 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
        vertex.color = vertex_colors,
        vertex.label = igraph::V(g)$name,
        vertex.label.cex = 0.8,
-       vertex.size = 10,
+       vertex.size = 15,
        edge.color = "gray70",
        edge.width = 1,
        layout = layout_coords,
@@ -436,15 +524,20 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
   
   invisible(g)
 }
-
-
 #' Simple correlation matrix plot (fallback without igraph)
 #' @keywords internal
 plot_correlation_matrix_simple <- function(clusterer, threshold, main) {
-  cor_matrix <- cor(clusterer$data)
+  # Use mixed-data compatible method
+  dist_obj <- get_correlation_distance_matrix(clusterer$data)
+  dist_mat <- as.matrix(dist_obj)
+  assoc_sq <- 1 - (dist_mat^2) / 2
+  
+  # Handle negative zeros carefully without destroying matrix dimensions
+  assoc_sq[assoc_sq < 0] <- 0
+  assoc_matrix <- sqrt(assoc_sq)
   
   # Create adjacency based on threshold
-  adj <- abs(cor_matrix) > threshold
+  adj <- assoc_matrix > threshold
   diag(adj) <- FALSE
   
   # Count connections per variable

@@ -7,11 +7,13 @@
 plot_dendrogram(clusterer, main = "Dendrogram", ...)
 }
 \arguments{
-\item{clusterer}{A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}).}
+\item{clusterer}{A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}
+or \code{DivisiveClusterer}).}
 
 \item{main}{Character string for the plot title (default: \code{"Dendrogram"}).}
 
-\item{...}{Additional parameters passed to \code{plot()}.}
+\item{...}{Additional parameters passed to \code{plot()} or the clusterer's
+specific dendrogram method.}
 }
 \value{
 Invisibly returns \code{NULL}. The function is called for its side effect
@@ -19,12 +21,28 @@ of creating a plot.
 }
 \description{
 Creates a dendrogram visualization for hierarchical clustering methods.
+For DivisiveClusterer, displays the split history as a top-down tree.
 }
 \details{
-This function is currently a placeholder and will be implemented according to
-the structure of \code{MCA_HClusterer}. It requires hierarchical clustering
-results stored in the clusterer object.
+This function automatically detects the clusterer type:
+\itemize{
+\item For \code{DivisiveClusterer}: Calls its \code{plot_split_dendrogram()} method
+which displays a top-down tree showing the split history.
+\item For other hierarchical methods: Will use standard dendrogram plotting
+(implementation depends on the specific clusterer structure).
+}
+}
+\examples{
+\dontrun{
+# For DivisiveClusterer
+data <- data.frame(matrix(rnorm(1000), ncol = 10))
+clusterer <- DivisiveClusterer$new(data, n_clusters = 3)
+clusterer$fit()
+plot_dendrogram(clusterer)
+}
+
 }
 \seealso{
+\code{\link{DivisiveClusterer}} for divisive clustering.
 \code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
 }

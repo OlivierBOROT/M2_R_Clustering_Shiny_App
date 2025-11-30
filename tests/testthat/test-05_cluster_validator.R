@@ -200,12 +200,12 @@ test_that("homogeneity_method produces valid Pseudo-F scores", {
     seed = 42
   )
   
-  # Le score doit être positif
+  # Scores should be positive
   expect_true(all(result$ch_scores > 0))
   expect_true(all(is.finite(result$ch_scores)))
   
-  # Note : On ne vérifie plus que c'est <= 1, car le Pseudo-F peut être grand !
-  # Le Pseudo-F peut valoir 5, 20, 100... selon la qualité du clustering
+  # Note: We no longer check that score <= 1, because Pseudo-F can be large!
+  # Pseudo-F can be 5, 20, 100... depending on clustering quality
 })
 
 # ============================================================================
