@@ -355,17 +355,16 @@ DivisiveClusterer <- R6::R6Class(
       rownames(squared_cor_matrix) <- colnames(data_to_use)
 
       # --- HYBRID PREDICTION LOGIC ---
+      # Check if new_data is all numeric
+      new_data_all_numeric <- all(sapply(data_to_use, is.numeric))
 
-      if (self$use_fast_path) {
-        # PATH A: FAST NUMERIC (Vectorized cor())
-        # Verify new_data is actually numeric
-        if (!all(sapply(data_to_use, is.numeric))) {
-          stop("Fast path enabled but new_data contains non-numeric variables.")
-        }
+      if (self$use_fast_path && new_data_all_numeric) {
+        # PATH A: FAST NUMERIC (Vectorized cor()) - only if new data is also numeric
         cor_mat <- cor(data_to_use, centers_matrix, use = "pairwise.complete.obs")
         squared_cor_matrix <- cor_mat^2
       } else {
         # PATH B: MIXED DATA (Handle factors with eta-squared)
+        # Used when training was mixed OR when new data contains factors
         for (j in seq_len(n_vars)) {
           variable <- data_to_use[[j]]
 
@@ -444,13 +443,21 @@ DivisiveClusterer <- R6::R6Class(
         cat(sprintf("\nCluster %d (%d variables):\n", k, length(members)))
         cat("  Variables:", paste(members, collapse = ", "), "\n")
 
-        if (length(self$cluster_eigenvalues[[k]]) > 0) {
-          cat(sprintf("  1st eigenvalue: %.3f\n", self$cluster_eigenvalues[[k]][1]))
-          if (length(self$cluster_eigenvalues[[k]]) > 1) {
-            cat(sprintf("  2nd eigenvalue: %.3f\n", self$cluster_eigenvalues[[k]][2]))
+        # Safely check if eigenvalues exist for this cluster
+        eigenvals <- NULL
+        if (!is.null(self$cluster_eigenvalues) && 
+            length(self$cluster_eigenvalues) >= k &&
+            !is.null(self$cluster_eigenvalues[[k]])) {
+          eigenvals <- self$cluster_eigenvalues[[k]]
+        }
+
+        if (!is.null(eigenvals) && length(eigenvals) > 0) {
+          cat(sprintf("  1st eigenvalue: %.3f\n", eigenvals[1]))
+          if (length(eigenvals) > 1) {
+            cat(sprintf("  2nd eigenvalue: %.3f\n", eigenvals[2]))
             cat(sprintf(
               "  Eigenvalue ratio (lambda2/lambda1): %.3f\n",
-              self$cluster_eigenvalues[[k]][2] / self$cluster_eigenvalues[[k]][1]
+              eigenvals[2] / eigenvals[1]
             ))
           }
           cat(sprintf("  Homogeneity: %.3f\n", self$cluster_homogeneity[k]))
@@ -758,6 +765,14 @@ DivisiveClusterer <- R6::R6Class(
               }
             }
           }
+          # Normalize coordinates to stay within unit circle
+          # (eta² for factors can exceed 1 before sqrt, causing coords > 1)
+          for (i in seq_len(nrow(coords))) {
+            norm_val <- sqrt(sum(coords[i, ]^2))
+            if (norm_val > 1) {
+              coords[i, ] <- coords[i, ] * 0.95 / norm_val
+            }
+          }
         } else if (!is.null(pca$quanti.cor)) {
           coords <- pca$quanti.cor[, 1:2, drop = FALSE]
         } else {
@@ -794,19 +809,126 @@ DivisiveClusterer <- R6::R6Class(
     },
 
     #' @description
-    #' Prepare data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
-    #' @return A list with coords, colors, pca, and centers for visualization.
-    get_plot_data_predict = function() {
-      # For DivisiveClusterer, we don't store prediction coords separately
+    #' Prepare data for plotting with illustrative/supplementary variables.
+    #' Projects new variables onto the global PCA space for visualization.
+    #' @param new_data New data frame with same observations as training data.
+    #' @param pred_result Optional prediction result (from predict()). If NULL, will call predict().
+    #' @return Self (invisibly).
+    prepare_plot_predict = function(new_data, pred_result = NULL) {
+      private$check_fitted()
 
-      # Return the basic plot data (supplementary vars would need separate handling)
-      return(self$get_plot_data())
+      # Get predictions if not provided
+      if (is.null(pred_result)) {
+        pred_result <- self$predict(new_data)
+      }
+
+      # Get base plot data (includes global PCA)
+      base_plot <- self$get_plot_data()
+      pca <- base_plot$pca
+
+      n_new_vars <- ncol(new_data)
+      new_coords <- matrix(0, nrow = n_new_vars, ncol = 2)
+
+      # Project new variables onto PCA space
+      if (self$use_fast_path) {
+        # Numeric path: use prcomp
+        if (inherits(pca, "prcomp")) {
+          pca_scores <- pca$x[, 1:2, drop = FALSE]
+        } else {
+          pca_scores <- pca$ind$coord[, 1:2, drop = FALSE]
+        }
+      } else {
+        # Mixed path: use PCAmix
+        if (inherits(pca, "prcomp")) {
+          pca_scores <- pca$x[, 1:2, drop = FALSE]
+        } else {
+          pca_scores <- pca$ind$coord[, 1:2, drop = FALSE]
+        }
+      }
+
+      # Calculate coordinates for each new variable
+      for (var_idx in seq_len(n_new_vars)) {
+        var_data <- new_data[, var_idx]
+
+        if (is.numeric(var_data)) {
+          # Numeric: correlation with PCA axes
+          new_coords[var_idx, 1] <- cor(var_data, pca_scores[, 1], use = "complete.obs")
+          new_coords[var_idx, 2] <- cor(var_data, pca_scores[, 2], use = "complete.obs")
+        } else {
+          # Factor: eta² (correlation ratio)
+          for (dim in 1:2) {
+            tryCatch({
+              fit <- suppressWarnings(lm(pca_scores[, dim] ~ var_data))
+              eta2 <- summary(fit)$r.squared
+              sign_val <- sign(mean(fit$fitted.values[var_data == levels(var_data)[1]], na.rm = TRUE))
+              if (is.na(sign_val)) sign_val <- 1
+              new_coords[var_idx, dim] <- sqrt(eta2) * sign_val
+            }, error = function(e) {
+              new_coords[var_idx, dim] <<- 0
+            })
+          }
+        }
+      }
+
+      # Normalize coordinates to stay within unit circle
+      for (i in seq_len(nrow(new_coords))) {
+        coord_norm <- sqrt(new_coords[i, 1]^2 + new_coords[i, 2]^2)
+        if (coord_norm > 1) {
+          new_coords[i, ] <- new_coords[i, ] / coord_norm * 0.95
+        }
+      }
+
+      # Create illustrative coordinates data frame
+      coords_illus <- data.frame(
+        PC1 = new_coords[, 1],
+        PC2 = new_coords[, 2],
+        variable = colnames(new_data),
+        cluster = factor(pred_result),
+        type = "illustrative",
+        stringsAsFactors = FALSE
+      )
+
+      # Store for later retrieval
+      private$coords_predict <- coords_illus
+
+      invisible(self)
+    },
+
+    #' @description
+    #' Get data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
+    #' @return A list with coords (including illustrative), colors, pca, and centers for visualization.
+    get_plot_data_predict = function() {
+      private$check_fitted()
+
+      # Get base plot data
+      base_plot <- self$get_plot_data()
+
+      # If no illustrative coords stored, return base
+      if (is.null(private$coords_predict)) {
+        return(base_plot)
+      }
+
+      # Add type to active coords
+      coords_active <- base_plot$coords
+      coords_active$type <- "active"
+
+      # Combine active and illustrative
+      coords_combined <- rbind(coords_active, private$coords_predict)
+
+      return(list(
+        coords = coords_combined,
+        colors = base_plot$colors,
+        pca = base_plot$pca,
+        centers = base_plot$centers
+      ))
     }
   ),
   private = list(
     # Stored standardization parameters from fit() for use in predict()
     centers = NULL,
     scales = NULL,
+    # Stored coordinates for illustrative variables
+    coords_predict = NULL,
 
     # Find the cluster with the highest 2nd eigenvalue (most heterogeneous)
     # Uses cached eigenvalues when available. Supports both numeric (fast) and mixed (PCAmix) paths.

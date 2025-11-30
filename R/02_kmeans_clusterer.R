@@ -394,6 +394,16 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
       }
 
       if (!is.null(coords) && nrow(coords) > 0) {
+        # Normalize coordinates to stay within unit circle
+        # (eta² for factors can result in coords > 1)
+        for (i in seq_len(nrow(coords))) {
+          norm_val <- sqrt(coords$PC1[i]^2 + coords$PC2[i]^2)
+          if (norm_val > 1) {
+            coords$PC1[i] <- coords$PC1[i] * 0.95 / norm_val
+            coords$PC2[i] <- coords$PC2[i] * 0.95 / norm_val
+          }
+        }
+
         # Add cluster assignments
         var_names <- colnames(self$data)
         coords$cluster <- factor(self$clusters[match(coords$variable, var_names)])
@@ -1134,10 +1144,11 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
       coords_active$type <- "active"
 
       # Project new variables onto global PCA space
-      all_numeric <- all(sapply(self$data, is.numeric))
+      all_numeric_train <- all(sapply(self$data, is.numeric))
+      all_numeric_new <- all(sapply(new_data, is.numeric))
 
-      if (all_numeric && inherits(private$pca_global, "prcomp")) {
-        # Case 1: Pure quantitative with prcomp
+      if (all_numeric_train && all_numeric_new && inherits(private$pca_global, "prcomp")) {
+        # Case 1: Pure quantitative training AND new data with prcomp
         if (self$standardize) {
           new_data_scaled <- scale(new_data, center = TRUE, scale = TRUE)
         } else {
@@ -1148,8 +1159,12 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
         pca_scores <- private$pca_global$x[, 1:2, drop = FALSE]
         new_coords <- cor(new_data_scaled, pca_scores)
       } else {
-        # Case 2: Mixed data with PCAmix
-        pca_scores <- private$pca_global$ind$coord[, 1:2, drop = FALSE]
+        # Case 2: Mixed data (either training or new) - use correlation/eta²
+        if (inherits(private$pca_global, "prcomp")) {
+          pca_scores <- private$pca_global$x[, 1:2, drop = FALSE]
+        } else {
+          pca_scores <- private$pca_global$ind$coord[, 1:2, drop = FALSE]
+        }
         new_coords <- matrix(0, nrow = n_new_vars, ncol = 2)
 
         for (var_idx in 1:n_new_vars) {
@@ -1179,6 +1194,16 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
       }
 
       # Create supplementary coordinates
+      # Normalize coordinates to ensure they stay within the unit circle
+      # This is especially important for categorical variables where eta² on both axes
+      # could place the point outside the circle (e.g., at (0.9, 0.9) which has norm > 1)
+      for (i in seq_len(nrow(new_coords))) {
+        coord_norm <- sqrt(new_coords[i, 1]^2 + new_coords[i, 2]^2)
+        if (coord_norm > 1) {
+          new_coords[i, ] <- new_coords[i, ] / coord_norm * 0.95  # Scale to stay inside circle
+        }
+      }
+
       coords_illus <- data.frame(
         PC1 = new_coords[, 1],
         PC2 = new_coords[, 2],
