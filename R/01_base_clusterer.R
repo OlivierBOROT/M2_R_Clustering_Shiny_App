@@ -1,14 +1,14 @@
 #' @title Base Clustering Class for Clustering Algorithms
-#' 
-#' @description 
+#'
+#' @description
 #' R6 abstract class that serves as a base for all clustering algorithm implementations.
 #' It defines common properties and methods that all clustering algorithms should have.
-#' 
+#'
 #' @details
 #' This class is not intended to be instantiated directly. Instead, use one of the
 #' derived classes such as \code{\link{KMeansClusterer}}, \code{MCA_HClusterer}, or
 #' \code{MixedClusterer}.
-#' 
+#'
 #' All derived classes inherit:
 #' \itemize{
 #'   \item Data validation and standardization capabilities
@@ -16,17 +16,17 @@
 #'   \item Cluster assignment and visualization support
 #'   \item Summary and print methods
 #' }
-#' 
+#'
 #' Subclasses must implement:
 #' \itemize{
 #'   \item \code{fit()}: Algorithm-specific fitting logic
 #'   \item \code{predict()}: Assignment of new data to clusters
 #'   \item \code{print()} and \code{summary()}: Display methods
 #' }
-#' 
+#'
 #' @seealso
 #' \code{\link{KMeansClusterer}} for variable clustering via homogeneity maximization.
-#' 
+#'
 #' @examples
 #' \dontrun{
 #' # Do not instantiate BaseClusterer directly
@@ -36,13 +36,12 @@
 #' clusterer$fit()
 #' print(clusterer)
 #' }
-#' 
+#'
 #' @importFrom R6 R6Class
 #' @export
 
 BaseClusterer <- R6::R6Class(
   "BaseClusterer",
-
   public = list(
     #' @field data The dataset to be clustered.
     data = NULL,
@@ -69,7 +68,6 @@ BaseClusterer <- R6::R6Class(
     variable_names = NULL,
 
 
-
     #' @description
     #' Create a new BaseClusterer object.
     #' @param data The dataset to be clustered (variables in columns, observations in rows).
@@ -88,7 +86,7 @@ BaseClusterer <- R6::R6Class(
 
       # Validate data first (before accessing ncol)
       private$validate_data()
-      
+
       # Store variable names
       self$variable_names <- colnames(data)
       if (is.null(self$variable_names)) {
@@ -100,7 +98,7 @@ BaseClusterer <- R6::R6Class(
       private$validate_params()
     },
 
-    
+
     #' @description
     #' Fit the clustering algorithm to the data.
     #' @return The fitted clustering model.
@@ -138,14 +136,14 @@ BaseClusterer <- R6::R6Class(
     get_n_variables = function() {
       return(ncol(self$data))
     },
-    
+
     #' @description
     #' Get the number of observations in the dataset
     #' @return Integer
     get_n_observations = function() {
       return(nrow(self$data))
     },
-    
+
     #' @description
     #' Get cluster sizes
     #' @return Named vector of cluster sizes
@@ -153,7 +151,7 @@ BaseClusterer <- R6::R6Class(
       private$check_fitted()
       return(table(self$clusters))
     },
-    
+
     #' @description
     #' Get variables in a specific cluster
     #' @param cluster_id Integer, cluster number
@@ -180,16 +178,16 @@ BaseClusterer <- R6::R6Class(
     #' @return Data frame with variable names and cluster assignments
     get_results = function() {
       private$check_fitted()
-    
+
       results <- data.frame(
         variable = self$variable_names,
         cluster = self$clusters,
         stringsAsFactors = FALSE
       )
-    
+
       return(results)
     },
-  
+
     #' @description
     #' Export results to CSV file
     #' @param file_path Path to save the CSV file
@@ -199,7 +197,7 @@ BaseClusterer <- R6::R6Class(
       cat(sprintf("Results saved to: %s\n", file_path))
       invisible(self)
     },
-    
+
     #' @description
     #' Get cluster centers (for compatibility with K selection methods)
     #' @return Matrix of cluster centers or NULL for base class
@@ -208,7 +206,6 @@ BaseClusterer <- R6::R6Class(
       return(NULL)
     }
   ),
-  
   private = list(
     # Validate parameters
     # Validates n_clusters, max_iter, and tol parameters
@@ -217,17 +214,17 @@ BaseClusterer <- R6::R6Class(
       if (!is.numeric(self$n_clusters) || self$n_clusters < 2) {
         stop("n_clusters must be an integer >= 2")
       }
-    
+
       # Validation of max_iter
       if (!is.numeric(self$max_iter) || self$max_iter < 1) {
         stop("max_iter must be a positive integer")
       }
-    
+
       # Validation of tol
       if (!is.numeric(self$tol) || self$tol <= 0) {
         stop("tol must be a positive number")
       }
-    
+
       # Check that n_clusters is not greater than or equal to number of variables
       if (self$n_clusters >= ncol(self$data)) {
         stop(sprintf(
@@ -236,19 +233,19 @@ BaseClusterer <- R6::R6Class(
         ))
       }
     },
-    
+
     # Validate data
     # Checks that data is a data.frame or matrix with minimum required dimensions
     validate_data = function() {
       if (!is.data.frame(self$data) && !is.matrix(self$data)) {
         stop("data must be a data.frame or matrix")
       }
-      
+
       # Minimum size validation
       if (ncol(self$data) < 2) {
         stop("data must have at least 2 variables")
       }
-      
+
       if (nrow(self$data) < 2) {
         stop("data must have at least 2 observations")
       }
@@ -275,10 +272,10 @@ BaseClusterer <- R6::R6Class(
           nrow(self$data)
         ))
       }
-    
+
       if (!all(sapply(new_data, is.numeric))) {
         stop("All variables in new_data must be numeric")
       }
-    }  
+    }
   )
 )

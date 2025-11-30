@@ -6,7 +6,6 @@
 MCA_HClusterer <- R6::R6Class(
   "MCA_HClusterer",
   inherit = BaseClusterer,
-
   public = list(
     #' @field mca_result The result of the MCA analysis.
     mca_result = NULL,

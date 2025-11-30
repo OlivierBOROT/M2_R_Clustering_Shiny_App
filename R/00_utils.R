@@ -1,9 +1,9 @@
 #' Low-Level Utility Functions for Clustering
-#' 
+#'
 #' This module contains low-level mathematical and data manipulation utilities
 #' for clustering algorithms. For cluster validation and K selection methods,
 #' see \code{\link{cluster-validator}}.
-#' 
+#'
 #' @name M2RClust-utils
 #' @importFrom grDevices colorRampPalette rainbow
 #' @importFrom graphics abline axis barplot grid image legend lines matplot mtext par plot.new points text
@@ -26,16 +26,16 @@ NULL
 #' @export
 standardize_data <- function(data, center = TRUE, scale = TRUE) {
   scaled_data <- scale(data, center = center, scale = scale)
-  
+
   # Extract centering and scaling parameters
   centers <- attr(scaled_data, "scaled:center")
   scales <- attr(scaled_data, "scaled:scale")
-  
+
   # Return as data.frame with attributes
   result <- as.data.frame(scaled_data)
   attr(result, "centers") <- centers
   attr(result, "scales") <- scales
-  
+
   return(result)
 }
 
@@ -55,7 +55,7 @@ apply_standardization <- function(data, centers, scales) {
   if (is.null(centers) && is.null(scales)) {
     return(as.data.frame(data))
   }
-  
+
   scaled_data <- scale(data, center = centers, scale = scales)
   return(as.data.frame(scaled_data))
 }
@@ -74,23 +74,23 @@ apply_standardization <- function(data, centers, scales) {
 get_correlation_distance_matrix <- function(data) {
   n_vars <- ncol(data)
   is_num <- sapply(data, is.numeric)
-  
+
   # Fast path: Pure quantitative data
   if (all(is_num)) {
     scaled_data <- scale(data, center = TRUE, scale = TRUE)
     cor_matrix <- cor(scaled_data)
-    
+
     # Apply Euclidean transformation: sqrt(2 * (1 - cor))
     # This is a proper Euclidean distance metric
     dist_matrix <- sqrt(2 * (1 - cor_matrix))
-    
+
     return(as.dist(dist_matrix))
   }
-  
+
   # Mixed data: Calculate association-based distances
   # Uses same logic as KMeansClusterer$initialize_correlation_based
   dist_mat <- matrix(0, n_vars, n_vars)
-  
+
   for (i in 1:n_vars) {
     for (j in i:n_vars) {
       if (i == j) {
@@ -101,7 +101,7 @@ get_correlation_distance_matrix <- function(data) {
         var_j <- data[[j]]
         is_i_num <- is_num[i]
         is_j_num <- is_num[j]
-        
+
         if (is_i_num && is_j_num) {
           # Quanti-Quanti: Pearson correlation
           r <- cor(var_i, var_j)
@@ -127,17 +127,17 @@ get_correlation_distance_matrix <- function(data) {
             quant_var <- var_j
             qual_var <- var_i
           }
-          
+
           # Compute η² = Between-group variance / Total variance
           group_means <- tapply(quant_var, qual_var, mean, na.rm = TRUE)
           overall_mean <- mean(quant_var, na.rm = TRUE)
-          
+
           ss_between <- sum(tapply(quant_var, qual_var, function(x) {
             length(x) * (mean(x, na.rm = TRUE) - overall_mean)^2
           }), na.rm = TRUE)
-          
+
           ss_total <- sum((quant_var - overall_mean)^2, na.rm = TRUE)
-          
+
           if (ss_total > 0) {
             eta_squared <- ss_between / ss_total
             sim <- eta_squared
@@ -145,7 +145,7 @@ get_correlation_distance_matrix <- function(data) {
             sim <- 0
           }
         }
-        
+
         # Convert similarity to distance: d = sqrt(2 * (1 - similarity))
         # Bounded in [0, sqrt(2)] (like correlation-based distance)
         dist_val <- sqrt(2 * (1 - sim))
@@ -154,7 +154,7 @@ get_correlation_distance_matrix <- function(data) {
       }
     }
   }
-  
+
   return(as.dist(dist_mat))
 }
 
@@ -170,19 +170,19 @@ euclidean_distance <- function(points, centers) {
   # Convert to matrices to avoid column name conflicts
   points_mat <- as.matrix(points)
   centers_mat <- as.matrix(centers)
-  
+
   # Ensure same number of columns
   if (ncol(points_mat) != ncol(centers_mat)) {
     stop("points and centers must have the same number of columns")
   }
-  
+
   # Combine centers and points, then calculate all pairwise distances
   combined <- rbind(centers_mat, points_mat)
   dist_matrix <- as.matrix(dist(combined))
-  
+
   # Extract only distances from centers to points
   n_centers <- nrow(centers_mat)
   n_points <- nrow(points_mat)
-  
+
   return(dist_matrix[1:n_centers, (n_centers + 1):(n_centers + n_points), drop = FALSE])
 }

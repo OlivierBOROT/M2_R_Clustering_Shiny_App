@@ -56,7 +56,7 @@ clusterer$print()
 
 # With custom parameters
 clusterer <- DivisiveClusterer$new(
-  data, 
+  data,
   n_clusters = 4,
   min_cluster_size = 2,
   rotation_method = "varimax",
@@ -66,17 +66,17 @@ clusterer$fit()
 
 # With Kaiser stopping rule (auto-stop when lambda2 < 1)
 clusterer <- DivisiveClusterer$new(
-  data, 
-  n_clusters = 10,  # Maximum clusters
+  data,
+  n_clusters = 10, # Maximum clusters
   stop_at_kaiser = TRUE
 )
 clusterer$fit()
 
 # With eigenvalue ratio stopping rule (more flexible)
 clusterer <- DivisiveClusterer$new(
-  data, 
+  data,
   n_clusters = 10,
-  min_eigenvalue_ratio = 0.15  # Stop if lambda2/lambda1 < 0.15
+  min_eigenvalue_ratio = 0.15 # Stop if lambda2/lambda1 < 0.15
 )
 clusterer$fit()
 
