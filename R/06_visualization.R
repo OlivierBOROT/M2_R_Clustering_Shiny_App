@@ -642,22 +642,44 @@ plot_single_cluster_contrib <- function(clusterer, k, top_n, homog) {
   
   # Get PCA if available
   if (is.function(clusterer$get_cluster_pca)) {
-    cluster_pca <- clusterer$get_cluster_pca()[[k]]
+    # Use tryCatch to avoid crash if the index is empty (extra safety)
+    cluster_pca <- tryCatch(clusterer$get_cluster_pca()[[k]], error = function(e) NULL)
     
     if (!is.null(cluster_pca) && length(vars_in_cluster) > 1) {
-      # Get loadings (contributions)
-      loadings <- abs(cluster_pca$rotation[, 1])
       
-      # Sort and select top N
-      top_vars <- head(sort(loadings, decreasing = TRUE), min(top_n, length(loadings)))
+      # Handle PCAmix objects (mixed data) vs standard prcomp objects
+      if (inherits(cluster_pca, "PCAmix")) {
+        # For PCAmix (mixed data), use squared loadings (sqload)
+        # sqload contains positive values (R² or correlation ratio)
+        if (!is.null(cluster_pca$sqload)) {
+          loadings <- cluster_pca$sqload[, 1]  # Already positive
+        } else {
+          loadings <- numeric(0)
+        }
+      } else {
+        # Standard case (prcomp or manual list from fast path)
+        if (!is.null(cluster_pca$rotation)) {
+          loadings <- abs(cluster_pca$rotation[, 1])
+        } else {
+          loadings <- numeric(0)
+        }
+      }
       
-      # Plot
-      barplot(top_vars,
-              main = sprintf("Cluster %d\n(Homogeneity: %.3f)", k, homog),
-              ylab = "Absolute loading on PC1",
-              las = 2,
-              col = rainbow(clusterer$n_clusters)[k],
-              cex.names = 0.8)
+      if (length(loadings) > 0) {
+        # Sort and select top N
+        top_vars <- head(sort(loadings, decreasing = TRUE), min(top_n, length(loadings)))
+        
+        # Plot
+        barplot(top_vars,
+                main = sprintf("Cluster %d\n(Homogeneity: %.3f)", k, homog),
+                ylab = "Contribution (Loading/R²)",
+                las = 2,
+                col = rainbow(clusterer$n_clusters)[k],
+                cex.names = 0.8)
+      } else {
+        plot.new()
+        text(0.5, 0.5, "No loadings available", cex = 1)
+      }
     } else {
       # Single variable cluster
       barplot(1,

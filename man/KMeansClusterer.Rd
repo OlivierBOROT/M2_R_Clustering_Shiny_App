@@ -66,7 +66,7 @@ Visualization: \code{\link{plot_clustering_2d}},
 \code{\link{plot_cluster_quality}}
 }
 \section{Super class}{
-\code{M2RClust::BaseClusterer} -> \code{KMeansClusterer}
+\code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{KMeansClusterer}
 }
 \section{Methods}{
 \subsection{Public methods}{

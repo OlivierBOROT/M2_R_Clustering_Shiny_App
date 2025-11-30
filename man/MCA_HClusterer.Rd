@@ -8,7 +8,7 @@ R6 class that implements clustering by first performing Multiple Correspondence 
 on qualitative data, followed by Hierarchical Agglomerative Clustering (HAC) on the MCA results.
 }
 \section{Super class}{
-\code{M2RClust::BaseClusterer} -> \code{MCA_HClusterer}
+\code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{MCA_HClusterer}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}

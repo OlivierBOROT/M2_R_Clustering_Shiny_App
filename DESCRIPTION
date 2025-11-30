@@ -15,7 +15,12 @@ RoxygenNote: 7.3.3
 Imports:
     R6,
     PCAmixdata,
-    cluster
+    cluster,
+    Shiny,
+    shinyDashboard,
+    DT,
+    readxl,
+    igraph
 Suggests:
     testthat (>= 3.0.0),
     knitr,

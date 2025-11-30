@@ -98,7 +98,7 @@ inertia <- clusterer$get_inertia()
 
 }
 \section{Super class}{
-\code{M2RClust::BaseClusterer} -> \code{DivisiveClusterer}
+\code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{DivisiveClusterer}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
@@ -156,6 +156,7 @@ inertia <- clusterer$get_inertia()
 \item \href{#method-DivisiveClusterer-get_split_details}{\code{DivisiveClusterer$get_split_details()}}
 \item \href{#method-DivisiveClusterer-get_hierarchy_tree}{\code{DivisiveClusterer$get_hierarchy_tree()}}
 \item \href{#method-DivisiveClusterer-get_plot_data}{\code{DivisiveClusterer$get_plot_data()}}
+\item \href{#method-DivisiveClusterer-prepare_plot_predict}{\code{DivisiveClusterer$prepare_plot_predict()}}
 \item \href{#method-DivisiveClusterer-get_plot_data_predict}{\code{DivisiveClusterer$get_plot_data_predict()}}
 \item \href{#method-DivisiveClusterer-clone}{\code{DivisiveClusterer$clone()}}
 }
@@ -464,16 +465,39 @@ A list with coords, colors, pca, and centers for visualization.
 }
 }
 \if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-DivisiveClusterer-prepare_plot_predict"></a>}}
+\if{latex}{\out{\hypertarget{method-DivisiveClusterer-prepare_plot_predict}{}}}
+\subsection{Method \code{prepare_plot_predict()}}{
+Prepare data for plotting with illustrative/supplementary variables.
+Projects new variables onto the global PCA space for visualization.
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{DivisiveClusterer$prepare_plot_predict(new_data, pred_result = NULL)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{new_data}}{New data frame with same observations as training data.}
+
+\item{\code{pred_result}}{Optional prediction result (from predict()). If NULL, will call predict().}
+}
+\if{html}{\out{</div>}}
+}
+\subsection{Returns}{
+Self (invisibly).
+}
+}
+\if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-DivisiveClusterer-get_plot_data_predict"></a>}}
 \if{latex}{\out{\hypertarget{method-DivisiveClusterer-get_plot_data_predict}{}}}
 \subsection{Method \code{get_plot_data_predict()}}{
-Prepare data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
+Get data for plotting with supplementary variables (compatibility with plot_clustering_with_supp).
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{DivisiveClusterer$get_plot_data_predict()}\if{html}{\out{</div>}}
 }
 
 \subsection{Returns}{
-A list with coords, colors, pca, and centers for visualization.
+A list with coords (including illustrative), colors, pca, and centers for visualization.
 }
 }
 \if{html}{\out{<hr>}}

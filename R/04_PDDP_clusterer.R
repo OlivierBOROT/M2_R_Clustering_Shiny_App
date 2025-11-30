@@ -296,6 +296,9 @@ DivisiveClusterer <- R6::R6Class(
       # Store final clusters (FIX: Ensure integer type for compatibility with tests)
       self$clusters <- as.integer(current_clusters)
 
+      # Initialize cluster_pca list with proper size to avoid index out of bounds
+      self$cluster_pca <- vector("list", self$n_clusters)
+
       # Compute cluster centers and homogeneity (1st PC of each cluster)
       private$compute_cluster_centers()
       private$compute_cluster_homogeneity()
