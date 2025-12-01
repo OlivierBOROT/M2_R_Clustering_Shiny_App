@@ -16,11 +16,16 @@ Imports:
     R6,
     PCAmixdata,
     cluster,
-    Shiny,
-    shinyDashboard,
+    shiny,
     DT,
     readxl,
-    igraph
+    readr,
+    bsicons,
+    bslib,
+    markdown,
+    glue,
+    shinythemes,
+    tools
 Suggests:
     testthat (>= 3.0.0),
     knitr,
@@ -28,6 +33,7 @@ Suggests:
     fmsb,
     igraph,
     FactoMineR,
-    ggplot2
+    ggplot2,
+    plotly
 VignetteBuilder: knitr
 Config/testthat/edition: 3

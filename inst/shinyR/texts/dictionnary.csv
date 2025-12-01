@@ -1,0 +1,61 @@
+key,en,fr
+APP_TITLE,Clustering my data !, Clusteriser mes données !
+BTN_THEME,Change the Theme,Changer le thème
+BTN_LANG,English,Français
+TAB_HOME,Home,Accueil
+TAB_UPLOAD,Upload Data,Charger des données
+TAB_CLUSTER,Clustering,Clustering
+TAB_MODEL,Predictive Modeling,Prédiction
+DATASET_INFO,No dataset loaded,Aucun jeu de données chargé
+UPLOAD_LABEL,Choose a dataset (CSV/XLSX),Choisir un jeu de données (CSV/XLSX)
+UPLOAD_CARD_TITLE,Upload Data,Charger des données
+UPLOAD_HELP,Please upload your dataset in CSV or XLSX format.,Veuillez charger votre jeu de données au format CSV ou XLSX.
+UPLOAD_COLUMNS_CARD_TITLE,Columns,Colonnes
+UPLOAD_COLUMNS_CARD_HELP,Detected columns and suggested types. Choose clustering role for each column.,Colonnes détectées et types suggérés. Choisissez le rôle de chaque colonne pour le clustering.
+UPLOAD_BTN_RELOAD_DATA,Reload Data,Recharger les données
+UPLOAD_BTN_CLEAR_UPLOAD,Clear,Effacer
+UPLOAD_COL_NAME,Name,Nom
+UPLOAD_COL_TYPE,Estimated type,Type estimé
+UPLOAD_COL_ROLE,Clustering role,Rôle pour le clustering
+UPLOAD_ROLE_ACTIVE,Active,Active
+UPLOAD_ROLE_ILLUSTRATIVE,Illustrative,Illustrative
+UPLOAD_ROLE_EXCLUDED,Excluded,Exclue
+UPLOAD_TYPE_QUANTITATIVE,quantitative,quantitative
+UPLOAD_TYPE_QUALITATIVE,qualitative,qualitative
+UPLOAD_EDIT_NAMES,Edit Column Names,Modifier les noms des colonnes
+UPLOAD_BTN_SAVE, Save Changes,Enregistrer les modifications
+UPLOAD_PREVIEW_TITLE, Header,En-tête
+CLUSTER_CONFIG_TITLE,Clustering Configuration,Configuration du clustering
+CLUSTER_ALGORITHM_LABEL,Select Clustering Algorithm,Sélectionner l'algorithme de clustering
+CLUSTER_N_CLUSTERS_LABEL,Number of Clusters,Nombre de clusters
+CLUSTER_SHOW_ADVANCED,Show Advanced Options,Afficher les options avancées
+CLUSTER_MAX_ITER_LABEL,Maximum Iterations,Itérations maximales
+CLUSTER_TOL_LABEL,Tolerance,Tolérance
+CLUSTER_SEED_LABEL,Seed,Graine
+PDDP_STOP_KAISER_LABEL,Stop at Kaiser,Arrêt Kaiser
+PDDP_MIN_EIGEN_RATIO_LABEL,Min Eigenvalue Ratio,Ratio Valeur Propre Min
+PDDP_SPLIT_CRITERION_LABEL,Split Criterion,Critère de découpe
+PDDP_STANDARDIZE_LABEL,Standardize Variables,Standardiser les variables
+PDDP_MIN_CLUSTER_SIZE_LABEL,Minimum Cluster Size,Taille minimale de cluster
+PDDP_ROTATION_METHOD_LABEL,Rotation Method,Méthode de rotation
+PDDP_PROMAX_M_LABEL,Promax Power,Puissance Promax
+CLUSTER_ALGO_SPECIFIC_TITLE_KMEANS,K-Means Parameters,Paramètres K-Means
+CLUSTER_MCA_PARAMS_TITLE,MCA/Hclust Parameters,Paramètres MCA/Hclust
+CLUSTER_ALGO_SPECIFIC_TITLE_PDDP,PDDP Parameters,Paramètres PDDP
+KMEANS_INIT_METHOD_LABEL,Initialization Method,Méthode d'initialisation
+KMEANS_N_INIT_LABEL,Number of Initializations,Nombre d'initialisations
+KMEANS_STANDARDIZE_LABEL,Standardize Data,Standardiser les données
+KMEANS_MAX_ITER_LABEL,Maximum Iterations,Itérations maximales
+KMEANS_TOL_LABEL,Tolerance,Tolérance
+KMEANS_SEED_LABEL,Seed,Graine
+HIERARCHICAL_LINKAGE_LABEL,Linkage Method,Méthode de linkage
+CLUSTER_DISSIMILARITY_LABEL,Dissimilarity,Dissimilarité
+CLUSTER_AUTO_DISCRETIZE_LABEL,Auto Discretize Numeric,Discrétisation Auto Numérique
+CLUSTER_N_BINS_LABEL,Number of Bins,Nombre de classes
+CLUSTER_BTN_PROJECT_ILLUSTRATIVE,Project Illustrative Variables,Projeter les variables illustratives
+CLUSTER_ILLUSTRATIVE_HELP,If enabled: illustrative variables will be projected onto the clustering space after clustering.,Si activé : les variables illustratives seront projetées dans l'espace de clustering après le clustering.
+CLUSTER_ILLUSTRATIVE_TITLE,Illustrative Variables,Variables illustratives
+CLUSTER_BTN_FIT,Run Clustering,Exécuter le clustering
+CLUSTER_ILLUSTRATIVE_INPUT_LABEL,Upload Illustrative Variables,Charger les variables illustratives
+CLUSTER_PDDP_PARAMS_TITLE,PDDP Parameters,Paramètres PDDP
+CLUSTER_HIERARCHICAL_PARAMS_TITLE,Hierarchical Clustering Parameters,Paramètres de Clustering Hiérarchique

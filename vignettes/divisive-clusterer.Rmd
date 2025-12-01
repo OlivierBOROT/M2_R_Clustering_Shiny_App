@@ -165,7 +165,7 @@ The Kaiser criterion stops splitting when λ₂ < 1 (no significant secondary co
 ```{r kaiser}
 clusterer_kaiser <- DivisiveClusterer$new(
   data = data_struct,
-  n_clusters = 10,  # Theoretical maximum
+  n_clusters = 10, # Theoretical maximum
   stop_at_kaiser = TRUE
 )
 clusterer_kaiser$fit()
@@ -182,7 +182,7 @@ Stops when λ₂/λ₁ falls below a threshold (cluster already homogeneous).
 clusterer_ratio <- DivisiveClusterer$new(
   data = data_struct,
   n_clusters = 10,
-  min_eigenvalue_ratio = 0.2  # Stop if λ₂/λ₁ < 0.2
+  min_eigenvalue_ratio = 0.2 # Stop if λ₂/λ₁ < 0.2
 )
 clusterer_ratio$fit()
 
@@ -197,7 +197,7 @@ Prevents splitting clusters that are too small.
 clusterer_minsize <- DivisiveClusterer$new(
   data = data_struct,
   n_clusters = 6,
-  min_cluster_size = 3  # At least 3 variables to split
+  min_cluster_size = 3 # At least 3 variables to split
 )
 clusterer_minsize$fit()
 clusterer_minsize$print()
@@ -228,7 +228,7 @@ clust_promax <- DivisiveClusterer$new(
   data = data_struct,
   n_clusters = 4,
   rotation_method = "promax",
-  promax_m = 4  # Power parameter
+  promax_m = 4 # Power parameter
 )
 clust_promax$fit()
 cat("Homogeneity (Promax):", round(clust_promax$get_homogeneity(), 4), "\n")
@@ -319,9 +319,9 @@ The correlation circle (`plot_clustering_2d()`) uses a global PCA which doesn't 
 ```{r predict}
 # New variables
 new_vars <- data.frame(
-  NewV1 = data_struct$V1 * 0.7 + rnorm(n, sd = 0.5),  # Close to group 1
-  NewV2 = data_struct$V4 * 0.6 + rnorm(n, sd = 0.6),  # Close to group 2
-  NewV3 = rnorm(n)  # Independent
+  NewV1 = data_struct$V1 * 0.7 + rnorm(n, sd = 0.5), # Close to group 1
+  NewV2 = data_struct$V4 * 0.6 + rnorm(n, sd = 0.6), # Close to group 2
+  NewV3 = rnorm(n) # Independent
 )
 
 predictions <- clusterer$predict(new_vars)

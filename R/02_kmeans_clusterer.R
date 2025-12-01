@@ -1200,7 +1200,7 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
       for (i in seq_len(nrow(new_coords))) {
         coord_norm <- sqrt(new_coords[i, 1]^2 + new_coords[i, 2]^2)
         if (coord_norm > 1) {
-          new_coords[i, ] <- new_coords[i, ] / coord_norm * 0.95  # Scale to stay inside circle
+          new_coords[i, ] <- new_coords[i, ] / coord_norm * 0.95 # Scale to stay inside circle
         }
       }
 
