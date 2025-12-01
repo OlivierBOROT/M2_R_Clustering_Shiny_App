@@ -26,7 +26,6 @@ Suggests:
     knitr,
     rmarkdown,
     fmsb,
-    igraph,
     FactoMineR,
     ggplot2
 VignetteBuilder: knitr

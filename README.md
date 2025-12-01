@@ -63,8 +63,22 @@ install.packages("chemin/vers/M2RClust_0.0.0.9000.tar.gz", repos = NULL, type = 
 
 ```r
 library(M2RClust)
-run_clustering_app()
+run_app()
 ```
+
+#### 🖥️ Fonctionnalités de l'application Shiny
+
+L'application Shiny offre une interface interactive complète :
+
+- **Import des données** : Chargement de fichiers CSV avec configuration flexible (séparateur, décimale, en-têtes)
+- **Sélection des variables** : Interface intuitive pour choisir les variables à inclure dans l'analyse
+- **Configuration des algorithmes** :
+  - KMeans : nombre de clusters, standardisation, seed
+  - PDDP (Divisif) : critères d'arrêt (ratio eigenvalue, Kaiser), nombre max de clusters
+  - Modalités (Dice) : mesure de dissimilarité (Dice/Cramér), méthode de liaison, discrétisation automatique
+- **Visualisations interactives** : Dendrogrammes, cercles de corrélation, heatmaps, graphes de réseau
+- **Export des résultats** : Téléchargement des clusters et graphiques
+- **Interface bilingue** : Français / Anglais
 
 ### Clustering de Variables (KMeansClusterer / DivisiveClusterer)
 
@@ -125,6 +139,7 @@ Des vignettes détaillées sont disponibles :
 
 - `vignette("kmeans-clusterer")` - Guide du KMeansClusterer
 - `vignette("divisive-clusterer")` - Guide du DivisiveClusterer
+- `vignette("modalities-clusterer")` - Guide du ModalitiesDiceClusterer
 
 ## 👥 Contributeurs
 

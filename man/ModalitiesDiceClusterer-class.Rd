@@ -13,14 +13,14 @@ to allow chaining. \code{summary()} returns a list with \code{group_centers}, \c
 Comprehensive R6 class for clustering variable modalities using a Dice-style
 dissimilarity computed on a disjunctive (one-hot) representation of categorical
 data. This implementation includes features inspired by \code{HClustVar}: automatic
-discretization of numeric variables, optional Cramér's V dissimilarity, cached
+discretization of numeric variables, optional Cramer's V dissimilarity, cached
 group-level statistics (centers, inertia decomposition, modality contributions),
 and flexible hierarchical linkage and re-cutting.
 }
 \details{
 Each modality (variable level) is represented as a binary column in a
 disjunctive matrix. Dissimilarities between modalities are computed either
-using a Dice-based squared distance (default) or a Cramér's V-based measure
+using a Dice-based squared distance (default) or a Cramer's V-based measure
 transformed into a squared dissimilarity. After computing the modality-by-modality
 dissimilarity matrix, hierarchical clustering (\code{hclust}) is applied and
 modalities are assigned to \code{n_groups} clusters. The class also computes and
@@ -437,14 +437,14 @@ clustering. Must be one of:
 \item "single": Single linkage (nearest neighbor)
 \item "complete": Complete linkage (furthest neighbor)
 \item "average": Average linkage (UPGMA)
-\item "ward.D": Ward's method with d instead of d²
+\item "ward.D": Ward's method with d instead of d2
 }}
 
 \item{\code{dissimilarity}}{Character. The dissimilarity measure between modalities.
 Must be one of:
 \itemize{
 \item "dice" (default): Dice dissimilarity based on binary vectors
-\item "cramer": Cramér's V association measure transformed to dissimilarity
+\item "cramer": Cramer's V association measure transformed to dissimilarity
 }}
 
 \item{\code{auto_discretize}}{Logical. If TRUE, numeric columns in the input data
@@ -519,7 +519,7 @@ This is the main fitting method that performs the complete clustering pipeline:
 
 The disjunctive matrix represents each modality (factor level) as a binary column,
 where 1 indicates the modality is present for that observation and 0 indicates absence.
-For example, a factor variable "color" with levels {red, blue, green} becomes
+For example, a factor variable "color" with levels \{red, blue, green\} becomes
 three binary columns: color.red, color.blue, color.green.
 }
 
@@ -528,8 +528,8 @@ The fitted ModalitiesDiceClusterer object (invisible for chaining).
 The object's fields are updated with clustering results:
 \itemize{
 \item data: Processed data (after discretization if applicable)
-\item disj: Disjunctive matrix (observations × modalities)
-\item d2: Squared dissimilarity matrix (modalities × modalities)
+\item disj: Disjunctive matrix (observations x modalities)
+\item d2: Squared dissimilarity matrix (modalities x modalities)
 \item hclust: Hierarchical clustering result
 \item groups: Cluster assignments for each modality
 \item modality_counts: Frequency of each modality
@@ -580,7 +580,7 @@ is easier for inspection and custom analyses.}
 \subsection{Details}{
 Extracts the dissimilarity matrix computed during the fit() process.
 The matrix contains pairwise distances between all modalities (factor levels).
-Distances are computed using either Dice dissimilarity or Cramér's V,
+Distances are computed using either Dice dissimilarity or Cramer's V,
 depending on the dissimilarity parameter set during initialization.
 
 The returned matrix is symmetric with zeros on the diagonal (each modality
@@ -589,7 +589,7 @@ modalities are in terms of their co-occurrence patterns across observations.
 }
 
 \subsection{Returns}{
-Either a numeric matrix (modalities × modalities) or a dist object,
+Either a numeric matrix (modalities x modalities) or a dist object,
 depending on the as_dist parameter. Matrix elements represent dissimilarities:
 smaller values indicate more similar modalities.
 }

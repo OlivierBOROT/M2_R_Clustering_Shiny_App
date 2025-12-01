@@ -383,8 +383,9 @@ if (requireNamespace("PCAmixdata", quietly = TRUE)) {
 ## Comparison with KMeansClusterer
 
 ```{r compare-methods}
-# Same data, same parameters
-data_test <- mtcars
+# Same data, same parameters (use numeric columns only)
+data(mtcars)
+data_test <- mtcars[, c("mpg", "cyl", "disp", "hp", "wt", "qsec")]
 
 # DivisiveClusterer
 div_clust <- DivisiveClusterer$new(data = data_test, n_clusters = 3)

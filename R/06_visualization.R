@@ -2,6 +2,7 @@
 #' 
 #' This script contains visualization functions for the clustering results.
 #' @name visualization
+#' @importFrom graphics arrows symbols
 NULL
 
 
@@ -259,7 +260,7 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
 #' Creates a dendrogram visualization for hierarchical clustering methods.
 #' For DivisiveClusterer, displays the split history as a top-down tree.
 #' 
-#' @param clusterer A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}
+#' @param clusterer A fitted hierarchical clustering object (e.g., \code{ModalitiesDiceClusterer}
 #'   or \code{DivisiveClusterer}).
 #' @param main Character string for the plot title (default: \code{"Dendrogram"}).
 #' @param ... Additional parameters passed to \code{plot()} or the clusterer's
@@ -279,7 +280,7 @@ plot_clustering_with_supp <- function(clusterer, main = NULL, show_centers = TRU
 #' 
 #' @seealso
 #' \code{\link{DivisiveClusterer}} for divisive clustering.
-#' \code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
+#' \code{\link{ModalitiesDiceClusterer}} for hierarchical clustering on categorical data.
 #' 
 #' @examples
 #' \dontrun{
@@ -362,7 +363,7 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
   
   # Convert Distance back to Association (Similarity)
   # d = sqrt(2 * (1 - sim))  =>  sim = 1 - (d^2) / 2
-  # Note: 'sim' here is on the squared scale (R², η², Cramer's V²)
+  # Note: 'sim' here is on the squared scale (R2, eta2, Cramer's V2)
   cor_matrix <- 1 - (dist_mat^2) / 2
   
   # Reorder by clusters
@@ -412,7 +413,7 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
 #'   \code{\link{BaseClusterer}}.
 #' @param threshold Numeric. Minimum association value (0 to 1) for displaying
 #'   edges (default: \code{0.3}). For mixed data, this applies to the square root
-#'   of the association measure (R², η², Cramer's V²).
+#'   of the association measure (R2, eta2, Cramer's V2).
 #' @param main Character string for the plot title
 #'   (default: \code{"Variable Correlation Network"}).
 #' @param layout Character string specifying the layout algorithm:
@@ -430,9 +431,9 @@ plot_correlation_heatmap <- function(clusterer, main = "Correlation Heatmap by C
 #' 
 #' For mixed data, association is computed using:
 #' \itemize{
-#'   \item Pearson R² for numeric-numeric pairs
-#'   \item η² (eta-squared) for numeric-factor pairs
-#'   \item Cramer's V² for factor-factor pairs
+#'   \item Pearson R2 for numeric-numeric pairs
+#'   \item eta2 (eta-squared) for numeric-factor pairs
+#'   \item Cramer's V2 for factor-factor pairs
 #' }
 #' The threshold applies to the square root of these measures (scale 0-1).
 #' 
@@ -471,7 +472,7 @@ plot_network_graph <- function(clusterer, threshold = 0.3, main = "Variable Corr
   
   # 2. Convert distance back to association (similarity)
   # d = sqrt(2 * (1 - sim))  =>  sim = 1 - (d^2) / 2
-  # Note: 'sim' here is on the squared scale (R², η², Cramer's V²)
+  # Note: 'sim' here is on the squared scale (R2, eta2, Cramer's V2)
   assoc_sq <- 1 - (dist_mat^2) / 2
   
   # 3. Take sqrt to make it comparable to a standard correlation (0-1 scale)
@@ -650,7 +651,7 @@ plot_single_cluster_contrib <- function(clusterer, k, top_n, homog) {
       # Handle PCAmix objects (mixed data) vs standard prcomp objects
       if (inherits(cluster_pca, "PCAmix")) {
         # For PCAmix (mixed data), use squared loadings (sqload)
-        # sqload contains positive values (R² or correlation ratio)
+        # sqload contains positive values (R2 or correlation ratio)
         if (!is.null(cluster_pca$sqload)) {
           loadings <- cluster_pca$sqload[, 1]  # Already positive
         } else {
@@ -672,7 +673,7 @@ plot_single_cluster_contrib <- function(clusterer, k, top_n, homog) {
         # Plot
         barplot(top_vars,
                 main = sprintf("Cluster %d\n(Homogeneity: %.3f)", k, homog),
-                ylab = "Contribution (Loading/R²)",
+                ylab = "Contribution (Loading/R2)",
                 las = 2,
                 col = rainbow(clusterer$n_clusters)[k],
                 cex.names = 0.8)

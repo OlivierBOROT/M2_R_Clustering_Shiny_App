@@ -5,14 +5,14 @@
 #' Comprehensive R6 class for clustering variable modalities using a Dice-style
 #' dissimilarity computed on a disjunctive (one-hot) representation of categorical
 #' data. This implementation includes features inspired by `HClustVar`: automatic
-#' discretization of numeric variables, optional Cramér's V dissimilarity, cached
+#' discretization of numeric variables, optional Cramer's V dissimilarity, cached
 #' group-level statistics (centers, inertia decomposition, modality contributions),
 #' and flexible hierarchical linkage and re-cutting.
 #'
 #' @details
 #' Each modality (variable level) is represented as a binary column in a
 #' disjunctive matrix. Dissimilarities between modalities are computed either
-#' using a Dice-based squared distance (default) or a Cramér's V-based measure
+#' using a Dice-based squared distance (default) or a Cramer's V-based measure
 #' transformed into a squared dissimilarity. After computing the modality-by-modality
 #' dissimilarity matrix, hierarchical clustering (`hclust`) is applied and
 #' modalities are assigned to `n_groups` clusters. The class also computes and
@@ -140,13 +140,13 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #'     \item "single": Single linkage (nearest neighbor)
     #'     \item "complete": Complete linkage (furthest neighbor)
     #'     \item "average": Average linkage (UPGMA)
-    #'     \item "ward.D": Ward's method with d instead of d²
+    #'     \item "ward.D": Ward's method with d instead of d2
     #'   }
     #' @param dissimilarity Character. The dissimilarity measure between modalities.
     #'   Must be one of:
     #'   \itemize{
     #'     \item "dice" (default): Dice dissimilarity based on binary vectors
-    #'     \item "cramer": Cramér's V association measure transformed to dissimilarity
+    #'     \item "cramer": Cramer's V association measure transformed to dissimilarity
     #'   }
     #' @param auto_discretize Logical. If TRUE, numeric columns in the input data
     #'   will be automatically discretized into categorical bins before clustering.
@@ -206,7 +206,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #'
     #' The disjunctive matrix represents each modality (factor level) as a binary column,
     #' where 1 indicates the modality is present for that observation and 0 indicates absence.
-    #' For example, a factor variable "color" with levels {red, blue, green} becomes
+    #' For example, a factor variable "color" with levels \{red, blue, green\} becomes
     #' three binary columns: color.red, color.blue, color.green.
     #'
     #' @param data A data.frame or matrix containing the data to cluster. Each column
@@ -219,8 +219,8 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #'   The object's fields are updated with clustering results:
     #'   \itemize{
     #'     \item data: Processed data (after discretization if applicable)
-    #'     \item disj: Disjunctive matrix (observations × modalities)
-    #'     \item d2: Squared dissimilarity matrix (modalities × modalities)
+    #'     \item disj: Disjunctive matrix (observations x modalities)
+    #'     \item d2: Squared dissimilarity matrix (modalities x modalities)
     #'     \item hclust: Hierarchical clustering result
     #'     \item groups: Cluster assignments for each modality
     #'     \item modality_counts: Frequency of each modality
@@ -325,7 +325,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
             # Ranges from 0 (identical) to higher values (different)
             d2[j, jprim] <- private$dice(disj_mat[, j], disj_mat[, jprim])
           } else {
-            # Cramér's V based dissimilarity between two modalities
+            # Cramer's V based dissimilarity between two modalities
             # Treats modalities as binary vectors and computes association
 
             # Create contingency table of the two binary modality columns
@@ -345,7 +345,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
               r <- nrow(tbl)
               c <- ncol(tbl)
 
-              # Cramér's V formula: sqrt(chi² / (n * min(r-1, c-1)))
+              # Cramer's V formula: sqrt(chi2 / (n * min(r-1, c-1)))
               # Measures strength of association, ranges [0, 1]
               v <- as.numeric(sqrt(as.numeric(chi) / (n * pmin(r - 1, c - 1))))
 
@@ -353,8 +353,8 @@ ModalitiesDiceClusterer <- R6::R6Class(
               if (is.na(v)) v <- 0
             }
 
-            # Transform similarity (Cramér's V) to dissimilarity
-            # (1 - V)² gives squared dissimilarity, 0 = identical
+            # Transform similarity (Cramer's V) to dissimilarity
+            # (1 - V)^2 gives squared dissimilarity, 0 = identical
             d2[j, jprim] <- (1 - v)^2
           }
         }
@@ -393,7 +393,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #' @details
     #' Extracts the dissimilarity matrix computed during the fit() process.
     #' The matrix contains pairwise distances between all modalities (factor levels).
-    #' Distances are computed using either Dice dissimilarity or Cramér's V,
+    #' Distances are computed using either Dice dissimilarity or Cramer's V,
     #' depending on the dissimilarity parameter set during initialization.
     #'
     #' The returned matrix is symmetric with zeros on the diagonal (each modality
@@ -405,7 +405,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #'   useful for compatibility with clustering functions, while the matrix format
     #'   is easier for inspection and custom analyses.
     #'
-    #' @return Either a numeric matrix (modalities × modalities) or a dist object,
+    #' @return Either a numeric matrix (modalities x modalities) or a dist object,
     #'   depending on the as_dist parameter. Matrix elements represent dissimilarities:
     #'   smaller values indicate more similar modalities.
     #'
@@ -424,7 +424,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
       if (is.null(self$d2)) stop("Distance matrix not computed. Run $fit(data) first")
 
       # Take square root of squared dissimilarity matrix (self$d2)
-      # This converts d² back to d (proper metric distance)
+      # This converts d2 back to d (proper metric distance)
       dmat <- sqrt(self$d2)
 
       # Return in requested format: dist object or full matrix
@@ -687,11 +687,11 @@ ModalitiesDiceClusterer <- R6::R6Class(
       cat("\nInterpretation:\n")
       inertia_ratio <- res$inertia["between"] / res$inertia["total"]
       if (inertia_ratio > 0.5) {
-        cat("  ✓ Good separation (>50% between-cluster variance)\n")
+        cat("  [+] Good separation (>50% between-cluster variance)\n")
       } else if (inertia_ratio > 0.3) {
-        cat("  ⚠ Moderate separation (30-50% between-cluster variance)\n")
+        cat("  [~] Moderate separation (30-50% between-cluster variance)\n")
       } else {
-        cat("  ⚠ Weak separation (<30% between-cluster variance)\n")
+        cat("  [-] Weak separation (<30% between-cluster variance)\n")
       }
       cat("\n")
 

@@ -56,8 +56,8 @@ We use the `mtcars` dataset which contains 11 variables describing 32 automobile
 data(mtcars)
 str(mtcars)
 
-# Correlation overview
-round(cor(mtcars), 2)
+# Correlation overview (numeric columns only)
+round(cor(mtcars[, sapply(mtcars, is.numeric)]), 2)
 ```
 
 ## Basic Usage

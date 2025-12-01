@@ -7,7 +7,7 @@
 plot_dendrogram(clusterer, main = "Dendrogram", ...)
 }
 \arguments{
-\item{clusterer}{A fitted hierarchical clustering object (e.g., \code{MCA_HClusterer}
+\item{clusterer}{A fitted hierarchical clustering object (e.g., \code{ModalitiesDiceClusterer}
 or \code{DivisiveClusterer}).}
 
 \item{main}{Character string for the plot title (default: \code{"Dendrogram"}).}
@@ -44,5 +44,5 @@ plot_dendrogram(clusterer)
 }
 \seealso{
 \code{\link{DivisiveClusterer}} for divisive clustering.
-\code{\link{MCA_HClusterer}} for hierarchical clustering on categorical data.
+\code{\link{ModalitiesDiceClusterer}} for hierarchical clustering on categorical data.
 }

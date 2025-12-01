@@ -17,7 +17,7 @@ plot_network_graph(
 
 \item{threshold}{Numeric. Minimum association value (0 to 1) for displaying
 edges (default: \code{0.3}). For mixed data, this applies to the square root
-of the association measure (R², η², Cramer's V²).}
+of the association measure (R2, eta2, Cramer's V2).}
 
 \item{main}{Character string for the plot title
 (default: \code{"Variable Correlation Network"}).}
@@ -43,9 +43,9 @@ with value exceeding \code{threshold}.
 
 For mixed data, association is computed using:
 \itemize{
-\item Pearson R² for numeric-numeric pairs
-\item η² (eta-squared) for numeric-factor pairs
-\item Cramer's V² for factor-factor pairs
+\item Pearson R2 for numeric-numeric pairs
+\item eta2 (eta-squared) for numeric-factor pairs
+\item Cramer's V2 for factor-factor pairs
 }
 The threshold applies to the square root of these measures (scale 0-1).
 }
