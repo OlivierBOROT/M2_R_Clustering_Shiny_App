@@ -11,10 +11,17 @@ M2RClust est un package R dédié au **clustering de variables** (et non d'obser
 
 ## ✨ Fonctionnalités
 
-- **Trois algorithmes de clustering** :
-  - `KMeansClusterer` : Clustering par maximisation de l'homogénéité intra-cluster
-  - `DivisiveClusterer` : Clustering divisif hiérarchique (PDDP)
-  - `modalitiesDiceClusterer` : Clustering des modalités (MCA_Hclusterer)
+### Algorithmes de Clustering
+
+Le package propose **3 approches complémentaires** :
+
+| Algorithme | Objet clusterisé | Approche | Cas d'usage |
+|------------|------------------|----------|-------------|
+| `KMeansClusterer` | **Variables** | Partitionnement itératif | Regrouper des variables corrélées |
+| `DivisiveClusterer` | **Variables** | Divisif hiérarchique (PDDP) | Hiérarchie interprétable de variables |
+| `ModalitiesDiceClusterer` | **Modalités** | Hiérarchique (Dice/Cramér) | Regrouper des niveaux de facteurs |
+
+> ⚠️ **Note importante** : `ModalitiesDiceClusterer` cluster les **modalités** (niveaux de variables catégorielles), pas les variables elles-mêmes.
 
 - **Support des données mixtes** : Variables numériques et catégorielles (via PCAmix)
 
@@ -59,7 +66,7 @@ library(M2RClust)
 run_clustering_app()
 ```
 
-### Utilisation programmatique
+### Clustering de Variables (KMeansClusterer / DivisiveClusterer)
 
 ```r
 library(M2RClust)
@@ -81,6 +88,35 @@ clusterer$summary()
 
 # Visualiser
 plot_clustering_2d(clusterer)
+```
+
+### Clustering de Modalités (ModalitiesDiceClusterer)
+
+```r
+library(M2RClust)
+
+# Données catégorielles (ou mixtes avec auto_discretize = TRUE)
+df <- data.frame(
+  couleur = factor(c("rouge", "bleu", "rouge", "vert", "bleu")),
+  taille = factor(c("petit", "grand", "moyen", "petit", "grand")),
+  prix = c(10, 25, 15, 8, 30)  # sera discrétisé automatiquement
+)
+
+# Créer le clusterer de modalités
+clusterer <- ModalitiesDiceClusterer$new(
+  n_groups = 3,
+  dissimilarity = "dice",
+  auto_discretize = TRUE
+)
+
+# Ajuster aux données
+clusterer$fit(df)
+
+# Voir les groupes de modalités
+clusterer$get_cluster_table()
+
+# Visualiser en MCA
+clusterer$plot_clusters()
 ```
 
 ## 📚 Documentation

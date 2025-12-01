@@ -98,7 +98,7 @@ inertia <- clusterer$get_inertia()
 
 }
 \section{Super class}{
-\code{\link[M2RClust:BaseClusterer]{M2RClust::BaseClusterer}} -> \code{DivisiveClusterer}
+\code{M2RClust::BaseClusterer} -> \code{DivisiveClusterer}
 }
 \section{Public fields}{
 \if{html}{\out{<div class="r6-fields">}}
