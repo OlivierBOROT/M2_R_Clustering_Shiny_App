@@ -25,6 +25,7 @@ Imports:
     markdown,
     glue,
     shinythemes,
+    FactoMineR,
     tools
 Suggests:
     testthat (>= 3.0.0),
@@ -32,7 +33,6 @@ Suggests:
     rmarkdown,
     fmsb,
     igraph,
-    FactoMineR,
     ggplot2,
     plotly
 VignetteBuilder: knitr
