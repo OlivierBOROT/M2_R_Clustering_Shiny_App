@@ -260,7 +260,7 @@ M2_R_Clustering_Shiny_App/
 ```
 
 ---
-https://github.com/perrineib
+
 ## 👥 Authors
 
 **M2 SISE 2024-2025 Team:**
