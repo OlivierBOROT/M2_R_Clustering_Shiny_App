@@ -293,7 +293,7 @@ cluster_page <- shiny::div(
                     shiny::checkboxInput(
                       "PDDP_stop_kaiser",
                       label = NULL,
-                      value = TRUE
+                      value = FALSE
                     )
                   ),
                   shiny::column(
@@ -316,9 +316,10 @@ cluster_page <- shiny::div(
                     shiny::numericInput(
                       "PDDP_min_eigen_ratio",
                       label = NULL,
-                      value = 1.5,
-                      min = 1.0,
-                      step = 0.1
+                      value = 0.1,
+                      min = 0.01,
+                      max = 1.0,
+                      step = 0.05
                     )
                   )
                 )

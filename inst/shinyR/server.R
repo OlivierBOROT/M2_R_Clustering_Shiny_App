@@ -51,6 +51,44 @@ server <- function(input, output, session) {
         }
       }, silent = TRUE)
 
+      # Clean up the data after loading
+      if (!is.null(dat) && is.data.frame(dat)) {
+        # Convert tibble to data.frame first
+        dat <- as.data.frame(dat)
+
+        # Check for row names column: first column with empty name or "...1"
+        first_col_name <- names(dat)[1]
+        if (first_col_name == "" || grepl("^\\.\\.\\.\\d+$", first_col_name)) {
+          # Use first column as row names if it contains unique values
+          first_col <- dat[[1]]
+          if (is.character(first_col) && !anyDuplicated(first_col) && !any(is.na(first_col))) {
+            rownames(dat) <- first_col
+            dat <- dat[, -1, drop = FALSE]
+          } else {
+            # Just remove the auto-generated column
+            dat <- dat[, -1, drop = FALSE]
+          }
+        }
+
+        # Convert list columns to atomic vectors (readr sometimes creates these)
+        for (col_name in names(dat)) {
+          col_data <- dat[[col_name]]
+          if (is.list(col_data) && !is.data.frame(col_data)) {
+            # Try to unlist; if mixed types, convert to character
+            tryCatch({
+              unlisted <- unlist(col_data)
+              if (length(unlisted) == nrow(dat)) {
+                dat[[col_name]] <- unlisted
+              } else {
+                dat[[col_name]] <- as.character(col_data)
+              }
+            }, error = function(e) {
+              dat[[col_name]] <<- as.character(col_data)
+            })
+          }
+        }
+      }
+
       cached$path <- path
       cached$mtime <- mtime
       cached$data <- dat

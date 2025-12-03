@@ -448,9 +448,9 @@ DivisiveClusterer <- R6::R6Class(
 
         # Safely check if eigenvalues exist for this cluster
         eigenvals <- NULL
-        if (!is.null(self$cluster_eigenvalues) &&
-          length(self$cluster_eigenvalues) >= k &&
-          !is.null(self$cluster_eigenvalues[[k]])) {
+        if (!is.null(self$cluster_eigenvalues) && 
+            length(self$cluster_eigenvalues) >= k &&
+            !is.null(self$cluster_eigenvalues[[k]])) {
           eigenvals <- self$cluster_eigenvalues[[k]]
         }
 
@@ -860,18 +860,15 @@ DivisiveClusterer <- R6::R6Class(
         } else {
           # Factor: eta² (correlation ratio)
           for (dim in 1:2) {
-            tryCatch(
-              {
-                fit <- suppressWarnings(lm(pca_scores[, dim] ~ var_data))
-                eta2 <- summary(fit)$r.squared
-                sign_val <- sign(mean(fit$fitted.values[var_data == levels(var_data)[1]], na.rm = TRUE))
-                if (is.na(sign_val)) sign_val <- 1
-                new_coords[var_idx, dim] <- sqrt(eta2) * sign_val
-              },
-              error = function(e) {
-                new_coords[var_idx, dim] <<- 0
-              }
-            )
+            tryCatch({
+              fit <- suppressWarnings(lm(pca_scores[, dim] ~ var_data))
+              eta2 <- summary(fit)$r.squared
+              sign_val <- sign(mean(fit$fitted.values[var_data == levels(var_data)[1]], na.rm = TRUE))
+              if (is.na(sign_val)) sign_val <- 1
+              new_coords[var_idx, dim] <- sqrt(eta2) * sign_val
+            }, error = function(e) {
+              new_coords[var_idx, dim] <<- 0
+            })
           }
         }
       }

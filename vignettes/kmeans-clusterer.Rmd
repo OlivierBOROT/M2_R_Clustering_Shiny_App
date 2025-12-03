@@ -142,7 +142,7 @@ clust_rand <- KMeansClusterer$new(
   data = mtcars,
   n_clusters = 3,
   init_method = "random",
-  n_init = 20, # More attempts since less stable
+  n_init = 20,  # More attempts since less stable
   seed = 42
 )
 clust_rand$fit()
@@ -153,18 +153,12 @@ cat("Homogeneity (random):", round(clust_rand$get_homogeneity(), 4), "\n")
 
 ```{r compare-init}
 cat("\n=== Initialization Methods Comparison ===\n")
-cat(sprintf(
-  "homogeneity++ : %.4f (runs: %d)\n",
-  clust_hpp$get_homogeneity(), clust_hpp$get_actual_runs()
-))
-cat(sprintf(
-  "correlation   : %.4f (runs: %d)\n",
-  clust_cor$get_homogeneity(), clust_cor$get_actual_runs()
-))
-cat(sprintf(
-  "random        : %.4f (runs: %d)\n",
-  clust_rand$get_homogeneity(), clust_rand$get_actual_runs()
-))
+cat(sprintf("homogeneity++ : %.4f (runs: %d)\n", 
+            clust_hpp$get_homogeneity(), clust_hpp$get_actual_runs()))
+cat(sprintf("correlation   : %.4f (runs: %d)\n", 
+            clust_cor$get_homogeneity(), clust_cor$get_actual_runs()))
+cat(sprintf("random        : %.4f (runs: %d)\n", 
+            clust_rand$get_homogeneity(), clust_rand$get_actual_runs()))
 ```
 
 ## Visualizations
@@ -172,11 +166,10 @@ cat(sprintf(
 ### Correlation Circle
 
 ```{r plot-2d, fig.cap="Correlation circle with clusters"}
-plot_clustering_2d(clusterer,
-  main = "Variable Clustering - mtcars",
-  show_centers = TRUE,
-  show_labels = TRUE
-)
+plot_clustering_2d(clusterer, 
+                   main = "Variable Clustering - mtcars",
+                   show_centers = TRUE,
+                   show_labels = TRUE)
 ```
 
 ### Correlation Heatmap
@@ -215,8 +208,8 @@ The `KMeansClusterer` allows projecting new (supplementary) variables onto the e
 # Create new variables (simulated)
 set.seed(123)
 new_vars <- data.frame(
-  NewVar1 = mtcars$mpg + rnorm(32, sd = 2), # Correlated with mpg
-  NewVar2 = mtcars$hp * 0.8 + rnorm(32, sd = 10) # Correlated with hp
+  NewVar1 = mtcars$mpg + rnorm(32, sd = 2),  # Correlated with mpg
+  NewVar2 = mtcars$hp * 0.8 + rnorm(32, sd = 10)  # Correlated with hp
 )
 
 # Predict clusters
@@ -312,7 +305,7 @@ if (requireNamespace("PCAmixdata", quietly = TRUE)) {
   )
   clusterer_mixed$fit()
   clusterer_mixed$print()
-
+  
   # Visualization
   plot_clustering_2d(clusterer_mixed, main = "Clustering - Mixed Data")
 }
@@ -327,19 +320,17 @@ clusterer_advanced <- KMeansClusterer$new(
   data = mtcars,
   n_clusters = 3,
   standardize = TRUE,
-  max_iter = 200, # Maximum iterations per run
-  tol = 1e-6, # Stricter convergence tolerance
-  n_init = 30, # More initializations
+  max_iter = 200,      # Maximum iterations per run
+  tol = 1e-6,          # Stricter convergence tolerance
+  n_init = 30,         # More initializations
   init_method = "homogeneity++",
   seed = 42
 )
 clusterer_advanced$fit()
 
 cat("Iterations:", clusterer_advanced$get_iterations(), "\n")
-cat(
-  "Runs performed:", clusterer_advanced$get_actual_runs(), "/",
-  clusterer_advanced$get_n_init(), "\n"
-)
+cat("Runs performed:", clusterer_advanced$get_actual_runs(), "/", 
+    clusterer_advanced$get_n_init(), "\n")
 cat("Homogeneity:", round(clusterer_advanced$get_homogeneity(), 4), "\n")
 ```
 
@@ -398,10 +389,8 @@ homog <- clusterer$get_cluster_homogeneity()
 for (k in 1:length(homog)) {
   cat(sprintf("  Cluster %d: %.3f\n", k, homog[k]))
 }
-cat(sprintf(
-  "\nGlobal homogeneity (weighted average): %.3f\n",
-  clusterer$get_homogeneity()
-))
+cat(sprintf("\nGlobal homogeneity (weighted average): %.3f\n", 
+            clusterer$get_homogeneity()))
 ```
 
 ## Conclusion

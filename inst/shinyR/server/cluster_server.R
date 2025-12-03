@@ -32,40 +32,6 @@ build_cluster_stats <- function(clusters_df) {
 	do.call(rbind, stats_list)
 }
 
-compute_mca_elbow_curve <- function(model, min_k = 2L, max_k = 10L) {
-	if (is.null(model$hclust) || is.null(model$d2)) stop("Missing hierarchical clustering results.")
-	n_mod <- ncol(model$d2)
-	if (is.null(n_mod) || n_mod < 3) stop("Need at least 3 modalities for elbow diagnostics.")
-	max_allowed <- max(min_k, min(max_k, n_mod - 1L))
-	if (max_allowed < min_k) stop("No valid k values for elbow curve.")
-	k_values <- seq.int(min_k, max_allowed)
-	dist_matrix <- model$d2
-	hcl <- model$hclust
-	within_vals <- vapply(k_values, function(k) {
-		groups <- stats::cutree(hcl, k = k)
-		compute_within_inertia(dist_matrix, groups)
-	}, numeric(1))
-	if (any(is.na(within_vals))) stop("Unable to compute inertia values for elbow curve.")
-	list(k = k_values, within = within_vals)
-}
-
-compute_within_inertia <- function(d2_matrix, groups) {
-	if (is.null(d2_matrix) || length(groups) == 0) return(NA_real_)
-	groups <- groups[!is.na(groups)]
-	available <- intersect(names(groups), colnames(d2_matrix))
-	if (length(available) == 0) return(NA_real_)
-	groups <- groups[available]
-	cluster_ids <- sort(unique(groups))
-	total <- 0
-	for (cid in cluster_ids) {
-		mods <- available[groups == cid]
-		if (length(mods) <= 1) next
-		sub_mat <- d2_matrix[mods, mods, drop = FALSE]
-		total <- total + sum(sub_mat) / (2 * length(mods))
-	}
-	total
-}
-
 get_active_dataset <- function() {
 	shiny::isolate({
 		dataset <- data_store$dataset
@@ -440,9 +406,10 @@ observeEvent(input$BUTTON_fit_cluster, {
 		run_pddp(method_params)
 	}
 
-#   cat(sprintf("Clustering triggered: %s with params %s\n",
-#               cluster_state$last_algorithm,
-#               paste(names(method_params), method_params, sep = "=", collapse = ", ")))
+  sprintf("Clustering triggered: %s with params %s",
+          cluster_state$last_algorithm,
+          paste(names(method_params), method_params, sep = "=", collapse = ", ")
+  ) %>% cat("\n")
 })
 
 output$mca_hclust_results_panel <- shiny::renderUI({
@@ -578,24 +545,6 @@ output$mca_hclust_results_panel <- shiny::renderUI({
 				)
 			)
 		),
-		shiny::fluidRow(
-			shiny::column(
-				width = 6,
-				shiny::div(
-					class = "card shadow-sm mb-3",
-					shiny::div(class = "card-header fw-semibold", "Silhouette Analysis"),
-					shiny::div(class = "card-body", shiny::plotOutput("mca_hclust_silhouette_plot", height = "320px"))
-				)
-			),
-			shiny::column(
-				width = 6,
-				shiny::div(
-					class = "card shadow-sm mb-3",
-					shiny::div(class = "card-header fw-semibold", "Elbow (Within Inertia)"),
-					shiny::div(class = "card-body", shiny::plotOutput("mca_hclust_elbow_plot", height = "320px"))
-				)
-			)
-		),
 		if (!is.null(illustrative_section)) illustrative_section,
 		shiny::div(
 			class = "card shadow-sm mb-3",
@@ -647,53 +596,10 @@ output$mca_hclust_cluster_plot <- shiny::renderPlot({
 	res <- cluster_state$mca_results
 	req(res, res$model)
 	tryCatch({
-		res$model$plot_mca(color_by_cluster = TRUE, add_ellipses = TRUE)
+		res$model$plot_clusters(add_ellipses = TRUE)
 	}, error = function(err) {
 		graphics::plot.new()
 		graphics::text(0.5, 0.5, sprintf("Unable to render cluster map: %s", err$message))
-	})
-})
-
-output$mca_hclust_silhouette_plot <- shiny::renderPlot({
-	res <- cluster_state$mca_results
-	req(res, res$model)
-	model <- res$model
-	n_mod <- if (!is.null(model$disj)) ncol(model$disj) else 0L
-	if (is.null(n_mod) || n_mod <= 2L) {
-		graphics::plot.new()
-		graphics::text(0.5, 0.5, "Need at least 3 modalities for silhouette analysis.")
-		return(invisible(NULL))
-	}
-	max_k <- max(2L, min(10L, as.integer(n_mod - 1L)))
-	tryCatch({
-		model$plot_silhouette(min_k = 2L, max_k = max_k)
-	}, error = function(err) {
-		graphics::plot.new()
-		graphics::text(0.5, 0.5, sprintf("Unable to render silhouette: %s", err$message))
-	})
-})
-
-output$mca_hclust_elbow_plot <- shiny::renderPlot({
-	res <- cluster_state$mca_results
-	req(res, res$model)
-	model <- res$model
-	tryCatch({
-		curve <- compute_mca_elbow_curve(model, min_k = 2L, max_k = 10L)
-		graphics::plot(
-			curve$k,
-			curve$within,
-			type = "b",
-			pch = 19,
-			col = "darkgreen",
-			lwd = 2,
-			xlab = "Number of Clusters (k)",
-			ylab = "Total Within-Cluster Inertia",
-			main = "Elbow Method (Inertia)"
-		)
-		graphics::grid()
-	}, error = function(err) {
-		graphics::plot.new()
-		graphics::text(0.5, 0.5, sprintf("Unable to render elbow curve: %s", err$message))
 	})
 })
 
