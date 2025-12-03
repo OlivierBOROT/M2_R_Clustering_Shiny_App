@@ -5,6 +5,31 @@
 [![R Package](https://img.shields.io/badge/R-Package-blue.svg)](https://www.r-project.org/)
 [![Shiny](https://img.shields.io/badge/Shiny-App-green.svg)](https://shiny.rstudio.com/)
 
+## 📖 Table des Matières
+
+- [M2RClust 📊](#m2rclust-)
+  - [📖 Table des Matières](#-table-des-matières)
+  - [🎯 Description](#-description)
+  - [✨ Fonctionnalités](#-fonctionnalités)
+    - [Algorithmes de Clustering](#algorithmes-de-clustering)
+  - [📦 Installation](#-installation)
+    - [Depuis GitHub](#depuis-github)
+    - [Avec les vignettes](#avec-les-vignettes)
+    - [Installation locale](#installation-locale)
+  - [🎮 Application Shiny](#-application-shiny)
+    - [Lancer l'application](#lancer-lapplication)
+      - [🖥️ Fonctionnalités de l'application Shiny](#️-fonctionnalités-de-lapplication-shiny)
+    - [Captures d'écran](#captures-décran)
+      - [1. Import des Données](#1-import-des-données)
+      - [2. Configuration du Clustering](#2-configuration-du-clustering)
+      - [3. Visualisation \& Résultats](#3-visualisation--résultats)
+  - [🚀 Exemples d'utilisation (R)](#-exemples-dutilisation-r)
+    - [Clustering de Variables (KMeansClusterer / DivisiveClusterer)](#clustering-de-variables-kmeansclusterer--divisiveclusterer)
+    - [Clustering de Modalités (ModalitiesDiceClusterer)](#clustering-de-modalités-modalitiesdiceclusterer)
+  - [📚 Documentation](#-documentation)
+  - [👥 Contributeurs](#-contributeurs)
+  - [📄 Licence](#-licence)
+
 ## 🎯 Description
 
 M2RClust est un package R dédié au **clustering de variables** (et non d'observations). Il permet de regrouper des variables selon leur structure de corrélation, avec support des données mixtes (numériques et catégorielles).
@@ -51,15 +76,27 @@ install.packages("devtools")
 devtools::install_github("OlivierBOROT/M2_R_Clustering_Shiny_App")
 ```
 
-### Depuis un fichier source
+### Avec les vignettes
+
+Pour installer le package avec la documentation complète :
+
+```r
+devtools::install_github("OlivierBOROT/M2_R_Clustering_Shiny_App", 
+                         build_vignettes = TRUE,
+                         dependencies = TRUE)
+```
+
+### Installation locale
+
+Si vous disposez du fichier source `.tar.gz` :
 
 ```r
 install.packages("chemin/vers/M2RClust_0.0.0.9000.tar.gz", repos = NULL, type = "source")
 ```
 
-## 🚀 Utilisation rapide
+## 🎮 Application Shiny
 
-### Lancer l'application Shiny
+### Lancer l'application
 
 ```r
 library(M2RClust)
@@ -68,17 +105,34 @@ run_app()
 
 #### 🖥️ Fonctionnalités de l'application Shiny
 
-L'application Shiny offre une interface interactive complète :
+L'application Shiny offre une interface interactive complète et bilingue :
 
-- **Import des données** : Chargement de fichiers CSV avec configuration flexible (séparateur, décimale, en-têtes)
-- **Sélection des variables** : Interface intuitive pour choisir les variables à inclure dans l'analyse
-- **Configuration des algorithmes** :
-  - KMeans : nombre de clusters, standardisation, seed
-  - PDDP (Divisif) : critères d'arrêt (ratio eigenvalue, Kaiser), nombre max de clusters
-  - Modalités (Dice) : mesure de dissimilarité (Dice/Cramér), méthode de liaison, discrétisation automatique
-- **Visualisations interactives** : Dendrogrammes, cercles de corrélation, heatmaps, graphes de réseau
-- **Export des résultats** : Téléchargement des clusters et graphiques
-- **Interface bilingue** : Français / Anglais
+- 📁 **Import des données** : Chargement facile de fichiers CSV et Excel.
+- ⚙️ **Configuration** : Interface intuitive pour sélectionner les variables actives et illustratives.
+- 🚀 **Algorithmes** : Exécution paramétrable des algorithmes (KMeans, Divisif, Modalités).
+  - *KMeans* : choix du nombre de clusters, standardisation, seed...
+  - *PDDP (Divisif)* : critères d'arrêt, nombre max de clusters...
+  - *Modalités* : mesure de dissimilarité (Dice/Cramér), méthode de liaison...
+- 📊 **Visualisations** : Dendrogrammes, cercles de corrélation, heatmaps, graphes de réseau interactifs (zoom, pan).
+- 📑 **Rapports** : Visualisation de résumés détaillés et statistiques.
+- 🔄 **Support Multi-langue** : Interface disponible en Français et Anglais.
+- 🎨 **Thèmes** : Plusieurs thèmes graphiques disponibles.
+- 💾 **Export** : Téléchargement des résultats de clustering.
+
+### Captures d'écran
+
+#### 1. Import des Données
+![Interface d'Import](images/upload.png)
+
+#### 2. Configuration du Clustering
+![Interface de Clustering](images/clustering.png)
+
+#### 3. Visualisation & Résultats
+![Vue des Résultats](images/results.png)
+
+---
+
+## 🚀 Exemples d'utilisation (R)
 
 ### Clustering de Variables (KMeansClusterer / DivisiveClusterer)
 
