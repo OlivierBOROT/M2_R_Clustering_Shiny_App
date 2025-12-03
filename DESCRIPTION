@@ -20,7 +20,8 @@ Imports:
     shinydashboard,
     DT,
     readxl,
-    igraph
+    igraph,
+    systemfonts
 Suggests:
     testthat (>= 3.0.0),
     knitr,

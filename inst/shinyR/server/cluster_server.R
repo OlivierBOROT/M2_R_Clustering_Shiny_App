@@ -406,10 +406,6 @@ observeEvent(input$BUTTON_fit_cluster, {
 		run_pddp(method_params)
 	}
 
-  sprintf("Clustering triggered: %s with params %s",
-          cluster_state$last_algorithm,
-          paste(names(method_params), method_params, sep = "=", collapse = ", ")
-  ) %>% cat("\n")
 })
 
 output$mca_hclust_results_panel <- shiny::renderUI({
