@@ -1043,7 +1043,8 @@ DivisiveClusterer <- R6::R6Class(
           X.quanti = X_quanti,
           X.quali = X_quali,
           ndim = ndim,
-          graph = FALSE
+          graph = FALSE,
+          rename.level = TRUE # Keep variable names consistent
         )
 
         return(pca_res$eig[, 1])
@@ -1096,7 +1097,7 @@ DivisiveClusterer <- R6::R6Class(
         # Calculate split quality (only for fast path where we have cor_sub)
         split_quality <- private$calculate_split_quality(cor_sub, assignments)
       } else {
-        # === MIXED PATH: PCAmix for mixed data ===
+        # === MIXED PATH: PCAmix for mixed data with PCArot rotation ===
         sub_data <- self$data[, vars_in_cluster, drop = FALSE]
 
         # Split into numeric and categorical
@@ -1120,46 +1121,51 @@ DivisiveClusterer <- R6::R6Class(
           X.quanti = X_quanti,
           X.quali = X_quali,
           ndim = n_comp,
-          graph = FALSE
+          graph = FALSE,
+          rename.level = TRUE # Keep variable names consistent
         )
 
         eigenvalues <- pca_res$eig[, 1]
 
-        # Get squared loadings from PCAmix
-        # For numeric vars: use coord.quanti
-        # For categorical vars: use coord.quali (average over levels per variable)
-        squared_loadings_list <- list()
-
-        if (!is.null(X_quanti)) {
-          sq_quanti <- pca_res$sqload[rownames(pca_res$sqload) %in% colnames(X_quanti), , drop = FALSE]
-          squared_loadings_list <- c(squared_loadings_list, list(sq_quanti))
-        }
-
-        if (!is.null(X_quali)) {
-          sq_quali <- pca_res$sqload[rownames(pca_res$sqload) %in% colnames(X_quali), , drop = FALSE]
-          squared_loadings_list <- c(squared_loadings_list, list(sq_quali))
-        }
-
-        # Combine squared loadings in original variable order
-        if (length(squared_loadings_list) > 0) {
-          all_sqload <- do.call(rbind, squared_loadings_list)
-          # Reorder to match vars_in_cluster order
-          sqload_ordered <- all_sqload[match(colnames(sub_data), rownames(all_sqload)), , drop = FALSE]
-
-          # Assign based on highest squared loading
-          if (ncol(sqload_ordered) >= 2) {
-            assignments <- apply(sqload_ordered[, 1:2, drop = FALSE], 1, which.max)
-          } else {
-            med <- median(sqload_ordered[, 1])
-            assignments <- ifelse(sqload_ordered[, 1] >= med, 1, 2)
-          }
+        # === APPLY PCArot ROTATION (Critical Fix) ===
+        # PCArot performs Varimax rotation on PCAmix results
+        # This ensures the split is clean and interpretable (VARCLUS principle)
+        if (n_comp == 2 && self$rotation_method != "none") {
+          # PCArot implements Varimax for mixed data (standard for VARCLUS)
+          # Note: If promax is requested, we use varimax here since PCAmixdata::PCArot
+          # only supports varimax. Promax is primarily for numeric-only data.
+          pca_rotated <- PCAmixdata::PCArot(
+            pca_res,
+            dim = n_comp,
+            graph = FALSE
+          )
+          sqload_to_use <- pca_rotated$sqload
         } else {
-          # Fallback: random split
-          assignments <- rep(1:2, length.out = length(vars_in_cluster))
+          # Use unrotated squared loadings if rotation_method = "none" or only 1 component
+          sqload_to_use <- pca_res$sqload
         }
 
-        # For mixed path, use a simplified quality metric
-        split_quality <- 0 # No correlation-based quality for mixed data
+        # Ensure squared loadings are ordered to match vars_in_cluster
+        sqload_ordered <- sqload_to_use[match(colnames(sub_data), rownames(sqload_to_use)), , drop = FALSE]
+
+        # Assign variables based on highest squared loading (after rotation)
+        if (ncol(sqload_ordered) >= 2) {
+          assignments <- apply(sqload_ordered[, 1:2, drop = FALSE], 1, which.max)
+        } else {
+          # Fallback for 1 component: median split
+          med <- median(sqload_ordered[, 1])
+          assignments <- ifelse(sqload_ordered[, 1] >= med, 1, 2)
+        }
+
+        # === IMPROVED SPLIT QUALITY CALCULATION ===
+        # Calculate quality based on how well variables fit their assigned partition
+        # Higher squared loading on the assigned axis = better quality
+        assigned_loads <- numeric(nrow(sqload_ordered))
+        for (i in seq_len(nrow(sqload_ordered))) {
+          assigned_loads[i] <- sqload_ordered[i, assignments[i]]
+        }
+        # Quality score: mean of assigned squared loadings (range [0, 1])
+        split_quality <- mean(assigned_loads)
       }
 
       # Create new cluster assignments
@@ -1291,7 +1297,8 @@ DivisiveClusterer <- R6::R6Class(
             X.quanti = X_quanti,
             X.quali = X_quali,
             ndim = min(5, length(vars_in_cluster)),
-            graph = FALSE
+            graph = FALSE,
+            rename.level = TRUE # Keep variable names consistent
           )
 
           self$cluster_eigenvalues[[k]] <- pca_res$eig[, 1]
