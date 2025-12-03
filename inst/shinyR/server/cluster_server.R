@@ -545,6 +545,24 @@ output$mca_hclust_results_panel <- shiny::renderUI({
 				)
 			)
 		),
+		shiny::fluidRow(
+			shiny::column(
+				width = 6,
+				shiny::div(
+					class = "card shadow-sm mb-3",
+					shiny::div(class = "card-header fw-semibold", "Silhouette Analysis"),
+					shiny::div(class = "card-body", shiny::plotOutput("mca_hclust_silhouette_plot", height = "320px"))
+				)
+			),
+			shiny::column(
+				width = 6,
+				shiny::div(
+					class = "card shadow-sm mb-3",
+					shiny::div(class = "card-header fw-semibold", "Elbow (Within Inertia)"),
+					shiny::div(class = "card-body", shiny::plotOutput("mca_hclust_elbow_plot", height = "320px"))
+				)
+			)
+		),
 		if (!is.null(illustrative_section)) illustrative_section,
 		shiny::div(
 			class = "card shadow-sm mb-3",
@@ -600,6 +618,49 @@ output$mca_hclust_cluster_plot <- shiny::renderPlot({
 	}, error = function(err) {
 		graphics::plot.new()
 		graphics::text(0.5, 0.5, sprintf("Unable to render cluster map: %s", err$message))
+	})
+})
+
+output$mca_hclust_silhouette_plot <- shiny::renderPlot({
+	res <- cluster_state$mca_results
+	req(res, res$model)
+	model <- res$model
+	n_mod <- if (!is.null(model$disj)) ncol(model$disj) else 0L
+	if (is.null(n_mod) || n_mod <= 2L) {
+		graphics::plot.new()
+		graphics::text(0.5, 0.5, "Need at least 3 modalities for silhouette analysis.")
+		return(invisible(NULL))
+	}
+	max_k <- max(2L, min(10L, as.integer(n_mod - 1L)))
+	tryCatch({
+		model$plot_silhouette(min_k = 2L, max_k = max_k)
+	}, error = function(err) {
+		graphics::plot.new()
+		graphics::text(0.5, 0.5, sprintf("Unable to render silhouette: %s", err$message))
+	})
+})
+
+output$mca_hclust_elbow_plot <- shiny::renderPlot({
+	res <- cluster_state$mca_results
+	req(res, res$model)
+	model <- res$model
+	tryCatch({
+		curve <- compute_mca_elbow_curve(model, min_k = 2L, max_k = 10L)
+		graphics::plot(
+			curve$k,
+			curve$within,
+			type = "b",
+			pch = 19,
+			col = "darkgreen",
+			lwd = 2,
+			xlab = "Number of Clusters (k)",
+			ylab = "Total Within-Cluster Inertia",
+			main = "Elbow Method (Inertia)"
+		)
+		graphics::grid()
+	}, error = function(err) {
+		graphics::plot.new()
+		graphics::text(0.5, 0.5, sprintf("Unable to render elbow curve: %s", err$message))
 	})
 })
 
