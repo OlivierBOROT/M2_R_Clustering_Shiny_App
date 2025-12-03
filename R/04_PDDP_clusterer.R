@@ -143,13 +143,13 @@ DivisiveClusterer <- R6::R6Class(
     #' @param rotation_method Rotation method: "varimax" (default), "promax", or "none".
     #' @param split_criterion Criterion for selecting cluster to split: "eigenvalue2" (default) or "homogeneity".
     #' @param stop_at_kaiser Logical. If TRUE, stop splitting when max 2nd eigenvalue < 1.0 (default FALSE).
-    #' @param min_eigenvalue_ratio Numeric. Minimum lambda2/lambda1 ratio required to continue splitting (default 0.1).
+    #' @param min_eigenvalue_ratio Numeric. Minimum lambda2/lambda1 ratio required to continue splitting (default 0.05).
     #' @param promax_m Numeric. Power parameter for Promax rotation (default 4). Only used when rotation_method = "promax".
     #' @return A new `DivisiveClusterer` object.
     initialize = function(data, n_clusters, standardize = TRUE,
-                          min_cluster_size = 3, rotation_method = "varimax",
+                          min_cluster_size = 2, rotation_method = "varimax",
                           split_criterion = "eigenvalue2", stop_at_kaiser = FALSE,
-                          min_eigenvalue_ratio = 0.1, promax_m = 4) {
+                          min_eigenvalue_ratio = 0.05, promax_m = 4) {
       super$initialize(data, n_clusters, standardize = standardize)
       self$split_history <- list()
       self$cluster_centers <- list()

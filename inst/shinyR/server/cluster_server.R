@@ -367,12 +367,12 @@ get_method_specific_params <- function() {
 		"PDDP" = list(
 			n_clusters = input$CLUSTER_n_clusters %||% 3,
 			standardize = isTRUE(input$PDDP_standardize),
-			min_cluster_size = input$PDDP_min_cluster_size %||% 3,
+			min_cluster_size = input$PDDP_min_cluster_size %||% 2,
 			rotation_method = input$PDDP_rotation_method %||% "varimax",
 			promax_m = input$PDDP_promax_m %||% 4,
 			stop_at_kaiser = isTRUE(input$PDDP_stop_kaiser),
 			split_criterion = input$PDDP_split_criterion %||% "eigenvalue2",
-			min_eigenvalue_ratio = input$PDDP_min_eigen_ratio %||% 0.1
+			min_eigenvalue_ratio = input$PDDP_min_eigen_ratio %||% 0.05
 		),
 		"K-Means" = list(
 			n_clusters = input$CLUSTER_n_clusters %||% 3,

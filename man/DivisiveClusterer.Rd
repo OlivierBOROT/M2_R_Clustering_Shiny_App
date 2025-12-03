@@ -184,11 +184,11 @@ Create a new DivisiveClusterer object.
   data,
   n_clusters,
   standardize = TRUE,
-  min_cluster_size = 3,
+  min_cluster_size = 2,
   rotation_method = "varimax",
   split_criterion = "eigenvalue2",
   stop_at_kaiser = FALSE,
-  min_eigenvalue_ratio = 0.1,
+  min_eigenvalue_ratio = 0.05,
   promax_m = 4
 )}\if{html}{\out{</div>}}
 }
@@ -210,7 +210,7 @@ Create a new DivisiveClusterer object.
 
 \item{\code{stop_at_kaiser}}{Logical. If TRUE, stop splitting when max 2nd eigenvalue < 1.0 (default FALSE).}
 
-\item{\code{min_eigenvalue_ratio}}{Numeric. Minimum lambda2/lambda1 ratio required to continue splitting (default 0.1).}
+\item{\code{min_eigenvalue_ratio}}{Numeric. Minimum lambda2/lambda1 ratio required to continue splitting (default 0.05).}
 
 \item{\code{promax_m}}{Numeric. Power parameter for Promax rotation (default 4). Only used when rotation_method = "promax".}
 }

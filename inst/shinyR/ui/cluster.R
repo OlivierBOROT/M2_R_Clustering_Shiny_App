@@ -250,7 +250,7 @@ cluster_page <- shiny::div(
                     shiny::numericInput(
                       "PDDP_min_cluster_size",
                       label = NULL,
-                      value = 3,
+                      value = 2,
                       min = 2,
                       step = 1
                     )
@@ -310,13 +310,13 @@ cluster_page <- shiny::div(
                   ),
                   shiny::column(
                     width = 4,
-                    shiny::div(style = "margin-bottom: 5px; font-weight: 500;", 
+                    shiny::div(style = "margin-bottom: 5px; font-weight: 500;" , 
                       shiny::uiOutput("txt_PDDP_MIN_EIGEN_RATIO_LABEL", inline = TRUE)
                     ),
                     shiny::numericInput(
                       "PDDP_min_eigen_ratio",
                       label = NULL,
-                      value = 0.1,
+                      value = 0.05,
                       min = 0.01,
                       max = 1.0,
                       step = 0.05
