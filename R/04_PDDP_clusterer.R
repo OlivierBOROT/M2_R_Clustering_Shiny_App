@@ -752,7 +752,8 @@ DivisiveClusterer <- R6::R6Class(
           X.quanti = split_res$X.quanti,
           X.quali = split_res$X.quali,
           ndim = 2,
-          graph = FALSE
+          graph = FALSE,
+          rename.level = TRUE # Prevent crashes when levels share names across variables
         )
 
         # For mixed data, use squared loadings for visualization

@@ -107,9 +107,20 @@ KMeansClusterer <- R6::R6Class("KMeansClusterer",
           ))
         }
 
-        # Check for missing values
-        if (anyNA(self$data[[col_name]])) {
-          stop(sprintf("Variable '%s' contains missing values. Please impute them before clustering.", col_name))
+        # 3. AUTO-IMPUTATION (New Code)
+        if (anyNA(col_data)) {
+          warning(sprintf("Imputing missing values in '%s'", col_name)) # Optional warning
+          
+          if (is.numeric(col_data)) {
+            # Replace NA with Median
+            med_val <- median(col_data, na.rm = TRUE)
+            self$data[[col_name]][is.na(col_data)] <- med_val
+          } else if (is.factor(col_data)) {
+            # Replace NA with Mode (most frequent level)
+            tab <- table(col_data)
+            mode_val <- names(tab)[which.max(tab)]
+            self$data[[col_name]][is.na(col_data)] <- mode_val
+          }
         }
       }
     },
