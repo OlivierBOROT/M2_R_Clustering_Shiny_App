@@ -1,0 +1,1571 @@
+\documentclass{report}
+\usepackage{graphicx}
+\usepackage{titlesec}
+\usepackage{natbib}
+\usepackage{bibentry}
+\usepackage{amsmath}
+\titleformat{\chapter}[hang]{\normalfont\huge\bfseries}{}{0pt}{}
+
+%-----Première page
+\title{\huge \textbf{Package de clustering de variables sous R} \\
+        \vspace{2cm}
+        \Large \textbf{Master 2 \\
+        Statistiques et informatique pour la Science des données}\\
+        \vspace{2cm}
+        \includegraphics[width=5cm]{pics/univlyon2_logo201806-standard.png}
+        \vspace{2cm}
+}
+
+\date{Novembre 2025}
+\author{ Olivier BOROT\\
+    Léo-Paul KNOEPFFLER\\
+    Perrine IBOUROI\\}
+
+
+\begin{document}
+\maketitle 
+   
+
+
+%-----Sommaire
+\newpage
+\setcounter{page}{1}
+\renewcommand{\contentsname}{Sommaire}
+\tableofcontents
+\newpage
+
+
+%-----Contenu
+\chapter*{Introduction}
+
+Ce rapport présente le développement du package R \texttt{M2RClust}, dédié au clustering de variables. Le package implémente trois algorithmes distincts : une approche par réallocation dynamique (K-Means), une approche hiérarchique divisive (inspiré du PROC VARCLUS du logiciel SAS), et une approche hybride (ACM + CAH) pour le clustering de modalités. Une architecture orientée objet (R6) a été adoptée pour garantir robustesse et évolutivité. Le projet inclut également une application Shiny. \newline
+
+
+Le clustering de variables est une technique exploratoire essentielle en science des données, visant à réduire la dimensionnalité en regroupant les variables redondantes ou fortement liées. Contrairement au clustering d'individus, l'objectif est d'identifier des structures latentes explicatives. \newline
+
+Nous présenterons donc dans un premier temps l'architecture générale et techniques du package, suivi d'une explication de chaque algorithmes avant de présenter l'interface
+
+%--- Architecture générale 
+\chapter{Architecture générale du package}
+
+Pour répondre aux exigences du projet, nous avons développé le package via un système de Programmation Orientée Objet \textbf{R6}, choix motivé par plusieurs considérations techniques et pratiques.
+
+\section{Le système R6}
+
+Le développement du package s'appuie sur le système de programmation orientée objet \textbf{R6}. Cette section présente les différents systèmes OOP disponibles en R et décrit les caractéristiques de R6 exploitées dans notre implémentation.
+
+\subsection{Les systèmes OOP en R}
+
+R propose plusieurs paradigmes de programmation orientée objet, chacun avec ses spécificités. Le tableau \ref{tab:oop_comparison} présente une comparaison des principales approches :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|c|}
+\hline
+\textbf{Caractéristique} & \textbf{S3} & \textbf{S4} & \textbf{R6} & \textbf{RC} \\
+\hline
+Sémantique de référence & Non & Non & Oui & Oui \\
+Encapsulation (privé/public) & Non & Non & Oui & Partielle \\
+Héritage multiple & Non & Oui & Non & Non \\
+Validation formelle & Non & Oui & Non & Non \\
+Performance & Moyenne & Faible & Élevée & Moyenne \\
+Syntaxe intuitive & Oui & Non & Oui & Moyenne \\
+\hline
+\end{tabular}
+\caption{Comparaison des systèmes OOP en R}
+\label{tab:oop_comparison}
+\end{table}
+
+\begin{itemize}
+    \item \textbf{S3} : Système historique de R, simple et flexible mais sans encapsulation formelle
+    \item \textbf{S4} : Extension formalisée de S3, avec validation des slots et héritage multiple
+    \item \textbf{R6} : Système moderne à sémantique de référence, proche des langages OOP classiques
+    \item \textbf{RC} : Reference Classes, précurseur de R6 intégré à R de base
+\end{itemize}
+
+\subsection{Caractéristiques de R6 utilisées dans le package}
+
+Le système R6 offre plusieurs fonctionnalités que nous avons exploitées dans l'implémentation du package :
+
+\begin{enumerate}
+    \item \textbf{Sémantique de référence (mutabilité)} : Les objets R6 sont modifiés \textit{in place}, ce qui permet d'enchaîner les opérations sans réassignation :
+    \begin{verbatim}
+    clusterer <- KMeansClusterer$new(data = mtcars, n_clusters = 3)
+    clusterer$fit()  # Modifie l'objet directement
+    \end{verbatim}
+    À titre de comparaison, avec S3/S4 il faudrait écrire : \texttt{clusterer <- fit(clusterer)}.
+    
+    \item \textbf{Encapsulation stricte} : La distinction entre méthodes/attributs \texttt{public} et \texttt{private} permet de :
+    \begin{itemize}
+        \item Exposer une API claire et stable aux utilisateurs
+        \item Masquer les détails d'implémentation internes
+        \item Prévenir les modifications accidentelles de l'état interne
+    \end{itemize}
+    
+    \item \textbf{Héritage} : Le mot-clé \texttt{inherit} permet une extension naturelle des classes. Dans notre package, cela facilite la factorisation du code commun dans la classe \texttt{BaseClusterer}, dont héritent les trois algorithmes.
+    
+    \item \textbf{Performance} : R6 présente de bonnes performances pour l'instanciation et l'appel de méthodes, ce qui est pertinent pour les algorithmes itératifs de clustering.
+    
+    \item \textbf{Syntaxe} : La notation \texttt{objet\$methode()} est similaire à celle des langages OOP classiques (Python, Java, C++), facilitant la lisibilité du code.
+\end{enumerate}
+
+\section{Architecture des classes}
+
+\subsection{Diagramme de classes}
+
+La figure \ref{fig:class_diagram} présente l'architecture hiérarchique du package :
+
+\begin{figure}[h]
+\centering
+\begin{verbatim}
+                    +-------------------+
+                    |   BaseClusterer   |  (Classe abstraite)
+                    +-------------------+
+                    | + data            |
+                    | + n_clusters      |
+                    | + clusters        |
+                    | + fitted          |
+                    | + standardize     |
+                    +-------------------+
+                    | + fit()           |  (abstraite)
+                    | + predict()       |  (abstraite)
+                    | + get_results()   |
+                    | + print()         |
+                    | + summary()       |
+                    +-------------------+
+                            ^
+                            | inherit
+          +-----------------+-----------------+
+          |                 |                 |
++-----------------+ +-----------------+ +-----------------+
+| KMeansClusterer | |DivisiveClusterer| | MCA_HClusterer  |
++-----------------+ +-----------------+ +-----------------+
+| - cluster_pca   | | + split_history | | + mca_result    |
+| - cluster_centers| | + cluster_centers| | + hclust_result |
+| - init_method   | | + rotation_method| |                 |
++-----------------+ +-----------------+ +-----------------+
+| + fit()         | | + fit()         | | + fit()         |
+| + predict()     | | + predict()     | | + predict()     |
+| + get_homogeneity| | + get_split_history| | + plot_dendrogram|
++-----------------+ +-----------------+ +-----------------+
+\end{verbatim}
+\caption{Diagramme de classes simplifié du package M2RClust}
+\label{fig:class_diagram}
+\end{figure}
+
+\subsection{Classe abstraite BaseClusterer}
+
+La classe \texttt{BaseClusterer} définit le contrat que doivent respecter toutes les implémentations de clustering. Elle encapsule :
+
+\subsubsection{Attributs publics}
+\begin{itemize}
+    \item \texttt{data} : DataFrame des données d'entrée (variables en colonnes)
+    \item \texttt{n\_clusters} : Nombre de clusters cible
+    \item \texttt{clusters} : Vecteur d'assignations (NULL avant \texttt{fit()})
+    \item \texttt{fitted} : Booléen indiquant si le modèle est ajusté
+    \item \texttt{standardize} : Booléen pour la standardisation des données
+    \item \texttt{max\_iter}, \texttt{tol} : Paramètres de convergence
+\end{itemize}
+
+\subsubsection{Méthodes publiques}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{8cm}|}
+\hline
+\textbf{Méthode} & \textbf{Description} \\
+\hline
+\texttt{fit()} & Ajuste le modèle aux données (abstraite) \\
+\texttt{predict(new\_data)} & Prédit les clusters pour de nouvelles variables \\
+\texttt{get\_results()} & Retourne un DataFrame avec les assignations \\
+\texttt{get\_cluster\_members(k)} & Retourne les noms des variables du cluster k \\
+\texttt{get\_cluster\_sizes()} & Retourne le nombre de variables par cluster \\
+\texttt{save\_results(file)} & Exporte les résultats en CSV \\
+\texttt{print()}, \texttt{summary()} & Affichage formaté des résultats \\
+\hline
+\end{tabular}
+\caption{Méthodes de la classe BaseClusterer}
+\end{table}
+
+\subsubsection{Méthodes privées}
+
+Les méthodes privées (préfixe \texttt{private\$}) incluent :
+\begin{itemize}
+    \item \texttt{validate\_data()} : Vérifie la cohérence des données d'entrée
+    \item \texttt{check\_fitted()} : Lève une erreur si le modèle n'est pas ajusté
+    \item \texttt{standardize\_data()} : Applique la standardisation si requise
+\end{itemize}
+
+\subsection{Polymorphisme et extensibilité}
+
+L'architecture permet d'ajouter facilement de nouveaux algorithmes. Pour créer un nouveau clusterer, il suffit de :
+
+\begin{verbatim}
+MonClusterer <- R6::R6Class("MonClusterer",
+  inherit = BaseClusterer,
+  public = list(
+    fit = function() {
+      # Implémentation spécifique
+      self$fitted <- TRUE
+      invisible(self)
+    },
+    predict = function(new_data) {
+      # Logique de prédiction
+    }
+  )
+)
+\end{verbatim}
+
+Cette approche garantit que toutes les fonctions de visualisation et de validation (modules 05 et 06) fonctionnent automatiquement avec tout nouveau clusterer respectant l'interface.
+
+\section{Organisation modulaire}
+
+\subsection{Structure des fichiers source}
+
+Le package adopte une organisation modulaire favorisant la séparation des responsabilités :
+
+\begin{verbatim}
+R/
+|-- 00_utils.R               # Fonctions utilitaires bas niveau
+|                            # (standardize_data, euclidean_distance, 
+|                            #  get_correlation_distance_matrix)
+|-- 01_base_clusterer.R      # Classe abstraite BaseClusterer
+|                            # Définit l'interface commune
+|
+|-- 02_kmeans_clusterer.R    # KMeansClusterer
+|                            # Algorithme de réallocation dynamique
+|                            # ~1300 lignes (complexité: initialisations multiples)
+|
+|-- 03_mca_hclust_cluster.R  # MCA_HClusterer  
+|                            # Clustering de modalités (ACM + CAH)
+|                            # ~ lignes (a completer)
+|
+|-- 04_PDDP_clusterer.R      # DivisiveClusterer
+|                            # Algorithme hiérarchique divisif
+|                            # ~1100 lignes (gestion de l'historique)
+|
+|-- 05_cluster_validator.R   # Méthodes de sélection de K
+|                            # (elbow, silhouette, Calinski-Harabasz)
+|                            # ~420 lignes
+|
+|-- 06_visualization.R       # Fonctions de visualisation
+|                            # (cercle des corrélations, heatmap, réseau)
+|                            # ~860 lignes
+|
+|-- 07_shiny_app.R           # Application Shiny (à développer)
+\end{verbatim}
+
+\subsection{Gestion des dépendances}
+
+Les dépendances du package sont classées en deux catégories dans le fichier \texttt{DESCRIPTION} :
+
+\subsubsection{Imports (obligatoires)}
+\begin{itemize}
+    \item \texttt{R6} : Système de classes orientées objet
+    \item \texttt{PCAmixdata} : ACP sur données mixtes (quantitatives + qualitatives)
+    \item \texttt{cluster} : Calcul des silhouettes
+\end{itemize}
+
+\subsubsection{Suggests (optionnels)}
+\begin{itemize}
+    \item \texttt{igraph} : Visualisation en graphe de réseau
+    \item \texttt{FactoMineR} : ACM pour MCA\_HClusterer
+    \item \texttt{ggplot2} : Graphiques avancés (vignettes)
+    \item \texttt{testthat} : Tests unitaires
+    \item \texttt{knitr}, \texttt{rmarkdown} : Documentation
+\end{itemize}
+
+Cette distinction permet une installation minimale tout en offrant des fonctionnalités étendues aux utilisateurs disposant des packages optionnels.
+
+\section{Patrons de conception utilisés}
+
+\subsection{Template Method (Méthode Gabarit)}
+
+Le patron \textit{Template Method} est utilisé dans \texttt{BaseClusterer} pour définir le squelette des algorithmes :
+
+\begin{verbatim}
+# Dans BaseClusterer (simplifié)
+initialize = function(data, n_clusters, ...) {
+  private$validate_data()      # Hook 1 : validation
+  if (self$standardize) {
+    self$data <- private$standardize_data()  # Hook 2
+  }
+  # ... initialisation commune
+}
+\end{verbatim}
+
+Les sous-classes peuvent surcharger \texttt{validate\_data()} pour ajouter des validations spécifiques (ex: \texttt{KMeansClusterer} accepte les facteurs, \texttt{BaseClusterer} non).
+
+\subsection{Strategy (Stratégie)}
+
+Le patron \textit{Strategy} est utilisé pour les méthodes d'initialisation dans \texttt{KMeansClusterer} :
+
+\begin{verbatim}
+# Sélection dynamique de la stratégie d'initialisation
+fit = function() {
+  initial_clusters <- switch(private$init_method,
+    "homogeneity++" = private$initialize_homogeneitypp(),
+    "correlation"   = private$initialize_correlation_based(),
+    "random"        = private$initialize_random()
+  )
+  # ... suite de l'algorithme
+}
+\end{verbatim}
+
+\subsection{Lazy Loading (Chargement paresseux)}
+
+Pour optimiser les performances, certains calculs coûteux sont différés :
+
+\begin{verbatim}
+# Dans KMeansClusterer
+get_plot_data = function() {
+  if (!private$pca_global_computed) {
+    private$compute_global_pca_if_needed()  # Calcul à la demande
+  }
+  return(list(coords = private$coords_fit, ...))
+}
+\end{verbatim}
+
+L'ACP globale pour la visualisation n'est calculée que si l'utilisateur appelle une fonction de visualisation, évitant un surcoût inutile si seules les assignations sont requises.
+
+\section{Gestion des erreurs et validation}
+
+\subsection{Validation des entrées}
+
+Chaque classe implémente une validation rigoureuse des paramètres :
+
+\begin{verbatim}
+# Exemple dans BaseClusterer$initialize()
+if (!is.data.frame(data) && !is.matrix(data)) {
+  stop("data must be a data frame or matrix")
+}
+if (n_clusters < 2) {
+  stop("n_clusters must be at least 2")
+}
+if (n_clusters >= ncol(data)) {
+  stop("n_clusters must be strictly less than number of variables")
+}
+\end{verbatim}
+
+\subsection{Vérification de l'état}
+
+La méthode privée \texttt{check\_fitted()} est appelée systématiquement avant toute opération nécessitant un modèle ajusté :
+
+\begin{verbatim}
+get_homogeneity = function() {
+  private$check_fitted()  # Lève une erreur si !self$fitted
+  return(private$global_homogeneity)
+}
+\end{verbatim}
+
+\subsection{Messages informatifs}
+
+Le package utilise \texttt{cat()} pour les messages de progression et \texttt{warning()} pour les situations non bloquantes :
+
+\begin{verbatim}
+# Progression pendant fit()
+cat(sprintf("Fitting %s with K=%d clusters...\n", 
+            class(self)[1], self$n_clusters))
+
+# Avertissement si convergence lente
+if (iter == self$max_iter) {
+  warning("Maximum iterations reached. Consider increasing max_iter.")
+}
+\end{verbatim}
+
+\section{Tests et qualité du code}
+
+\subsection{Couverture des tests}
+
+Le package inclut une suite de tests unitaires via \texttt{testthat} :
+
+\begin{verbatim}
+tests/testthat/
+|-- test-00_utils.R               # ~200 lignes
+|-- test-01_base_clusterer.R      # ~290 lignes
+|-- test-02_kmeans_clusterer.R    # ~675 lignes
+|-- test-03_mca_hclust_cluster.R  # ~379 lignes
+|-- test-04_PDDP_clusterer.R      # ~889 lignes
+|-- test-05_cluster_validator.R   # ~318 lignes
+|-- test-06_visualization.R       # ~330 lignes
+|-- test-integration.R            # ~277 lignes
+\end{verbatim}
+
+Les tests couvrent :
+\begin{itemize}
+    \item Instanciation avec paramètres valides/invalides
+    \item Convergence des algorithmes
+    \item Cohérence des résultats (reproductibilité avec \texttt{seed})
+    \item Cas limites (K=2, K=n\_vars-1, données mixtes)
+    \item Intégration entre modules
+\end{itemize}
+
+\subsection{Standards de codage}
+
+Le code respecte le \textit{Tidyverse Style Guide}, appliqué automatiquement via le package \texttt{styler} :
+
+\begin{itemize}
+    \item Indentation : 2 espaces
+    \item Longueur de ligne : max 80 caractères
+    \item Nommage : \texttt{snake\_case} pour fonctions et variables
+    \item Documentation : Roxygen2 pour toutes les fonctions exportées
+\end{itemize}
+
+%--- Algos
+\chapter{2.Méthodes de clustering de variables utilisées}
+Ce chapitre présente les trois algorithmes de clustering de variables implémentés dans le package. Chaque méthode répond à des besoins spécifiques selon le type de données et l'objectif de l'analyse.
+
+\section{Clustering par réallocation dynamique (KMeansClusterer)}
+
+L'algorithme \texttt{KMeansClusterer} est inspiré de la fonction \texttt{kmeansvar()} du package \texttt{ClustOfVar} \cite{chavent2012clustofvar}. Il s'agit d'une adaptation du K-Means classique au clustering de variables, où l'objectif est de maximiser l'\textbf{homogénéité} au sein de chaque cluster.
+
+\subsection{Principe fondamental}
+
+Contrairement au K-Means classique qui minimise l'inertie intra-cluster sur des individus, cette méthode travaille sur les \textbf{variables} et maximise l'homogénéité de chaque groupe. L'homogénéité d'un cluster est définie comme la proportion de variance expliquée par sa première composante principale :
+
+\begin{equation}
+H_k = \frac{\lambda_1^{(k)}}{\sum_{j=1}^{p_k} \lambda_j^{(k)}}
+\label{eq:homogeneity}
+\end{equation}
+
+où $\lambda_j^{(k)}$ représente la $j$-ème valeur propre de l'ACP réalisée sur les $p_k$ variables du cluster $k$.
+
+Le critère global à maximiser est l'homogénéité pondérée :
+
+\begin{equation}
+H_{global} = \sum_{k=1}^{K} \frac{p_k}{p} \cdot H_k
+\label{eq:global_homogeneity}
+\end{equation}
+
+où $p$ est le nombre total de variables et $p_k$ le nombre de variables dans le cluster $k$.
+
+\subsection{Description de l'algorithme}
+
+L'algorithme procède par itérations successives en deux étapes (figure \ref{fig:kmeans_algo}) :
+
+\begin{figure}[h]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithme : KMeansVar pour le clustering de variables}
+\vspace{0.3cm}
+
+\textbf{Entrée :} Données $\mathbf{X}$ ($n \times p$), nombre de clusters $K$
+
+\textbf{Sortie :} Partition $\mathcal{P} = \{C_1, \ldots, C_K\}$ des variables
+
+\vspace{0.2cm}
+\begin{enumerate}
+    \item \textbf{Initialisation :} Créer une partition initiale des $p$ variables en $K$ clusters
+    \item \textbf{Répéter} jusqu'à convergence :
+    \begin{enumerate}
+        \item[(a)] \textbf{Étape de représentation :} Pour chaque cluster $C_k$, calculer la première composante principale $\mathbf{c}_k$ (centre du cluster)
+        \item[(b)] \textbf{Étape d'affectation :} Pour chaque variable $X_j$, l'affecter au cluster $k^*$ dont le centre maximise l'association :
+        \[
+        k^* = \arg\max_k \rho^2(X_j, \mathbf{c}_k)
+        \]
+    \end{enumerate}
+    \item \textbf{Retourner} la partition finale et l'homogénéité globale
+\end{enumerate}
+}}
+\caption{Pseudo-code de l'algorithme KMeansVar}
+\label{fig:kmeans_algo}
+\end{figure}
+
+\subsubsection{Étape de représentation}
+
+Pour chaque cluster $C_k$, on réalise une ACP sur les variables qu'il contient. Le \textbf{centre du cluster} est défini comme le vecteur des scores de la première composante principale (PC1). Ce centre représente la direction de variance maximale commune aux variables du cluster.
+
+\begin{verbatim}
+# Pseudo-code R
+for (k in 1:K) {
+  data_cluster <- data[, clusters == k]
+  pca_k <- prcomp(data_cluster, scale. = TRUE)
+  center_k <- pca_k$x[, 1]  # Scores PC1
+}
+\end{verbatim}
+
+\subsubsection{Étape d'affectation}
+
+Chaque variable est réaffectée au cluster dont le centre présente la plus forte association avec elle. La mesure d'association dépend du type de variable :
+
+\begin{itemize}
+    \item \textbf{Variable quantitative} : Coefficient de détermination $R^2$ (corrélation au carré)
+    \[
+    \rho^2(X_j, \mathbf{c}_k) = \text{cor}(X_j, \mathbf{c}_k)^2
+    \]
+    
+    \item \textbf{Variable qualitative} : Rapport de corrélation $\eta^2$
+    \[
+    \eta^2(X_j, \mathbf{c}_k) = \frac{SS_{between}}{SS_{total}} = \frac{\sum_{m} n_m (\bar{c}_{k,m} - \bar{c}_k)^2}{\sum_{i}(c_{k,i} - \bar{c}_k)^2}
+    \]
+    où $m$ parcourt les modalités de $X_j$ et $\bar{c}_{k,m}$ est la moyenne de $\mathbf{c}_k$ sur les individus de la modalité $m$.
+\end{itemize}
+
+\subsection{Support des données mixtes}
+
+Une originalité de notre implémentation est le support natif des \textbf{données mixtes} (variables quantitatives et qualitatives simultanément). Pour cela, nous utilisons le package \texttt{PCAmixdata} \cite{chavent2014pcamixdata} qui généralise l'ACP aux données mixtes.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|c|}
+\hline
+\textbf{Type de paire} & \textbf{Mesure d'association} & \textbf{Formule} & \textbf{Interprétation} \\
+\hline
+Quanti - Quanti & $R^2$ de Pearson & $\text{cor}(X_i, X_j)^2$ & Corrélation linéaire \\
+Quali - Quali & $V^2$ de Cramér & $\frac{\chi^2}{n \cdot \min(r-1, s-1)}$ & Association catégorielle \\
+Quanti - Quali & $\eta^2$ & $\frac{SS_{between}}{SS_{total}}$ & Rapport de corrélation \\
+\hline
+\end{tabular}
+\caption{Mesures d'association utilisées selon le type de variables}
+\label{tab:associations}
+\end{table}
+
+\subsection{Stratégies d'initialisation}
+
+La qualité de la solution finale dépend fortement de l'initialisation. Trois stratégies sont proposées :
+
+\subsubsection{Initialisation aléatoire (\texttt{random})}
+
+Les variables sont affectées aléatoirement aux $K$ clusters. Simple mais sensible aux minima locaux.
+
+\subsubsection{Initialisation par corrélation (\texttt{correlation})}
+
+Une CAH (Classification Ascendante Hiérarchique) est d'abord réalisée sur la matrice de dissimilarité des variables, puis coupée en $K$ groupes. La dissimilarité est calculée comme :
+
+\[
+d(X_i, X_j) = \sqrt{1 - \rho^2(X_i, X_j)}
+\]
+
+Cette méthode est \textbf{déterministe} et produit toujours la même partition initiale.
+
+\subsubsection{Initialisation homogeneity++ (\texttt{homogeneity++})}
+
+Inspirée de la méthode K-Means++, cette stratégie sélectionne les centres initiaux de manière à maximiser leur diversité. La première variable est choisie aléatoirement, puis chaque variable suivante est sélectionnée avec une probabilité proportionnelle au carré de sa distance au centre le plus proche.
+
+\subsection{Exécutions multiples et arrêt précoce}
+
+Pour éviter les minima locaux, l'algorithme est exécuté \texttt{n\_init} fois avec des initialisations différentes. Un mécanisme d'\textbf{arrêt précoce} stoppe les exécutions si le même score optimal est atteint deux fois consécutivement, supposant que l'optimum global a été trouvé.
+
+\begin{verbatim}
+# Stratégie d'arrêt précoce
+for (run in 1:n_init) {
+  result <- run_clustering_once()
+  if (result$homogeneity > best_homogeneity) {
+    best_homogeneity <- result$homogeneity
+    best_clusters <- result$clusters
+    times_found <- 1
+  } else if (result$homogeneity == best_homogeneity) {
+    times_found <- times_found + 1
+    if (times_found >= 2) break  # Arrêt précoce
+  }
+}
+\end{verbatim}
+
+\subsection{Critère de convergence}
+
+L'algorithme converge lorsque l'une des conditions suivantes est satisfaite :
+
+\begin{enumerate}
+    \item \textbf{Stabilité de la partition :} Aucune variable ne change de cluster entre deux itérations
+    \item \textbf{Stabilité de l'homogénéité :} $|H_{global}^{(t)} - H_{global}^{(t-1)}| < \epsilon$ (tolérance)
+    \item \textbf{Nombre maximal d'itérations :} \texttt{max\_iter} atteint
+\end{enumerate}
+
+\subsection{Complexité algorithmique}
+
+La complexité par itération est dominée par les ACP locales :
+
+\begin{itemize}
+    \item \textbf{Étape de représentation :} $O(K \cdot n \cdot \bar{p}^2)$ où $\bar{p} = p/K$ est le nombre moyen de variables par cluster
+    \item \textbf{Étape d'affectation :} $O(p \cdot K \cdot n)$
+    \item \textbf{Complexité totale :} $O(T \cdot R \cdot (K \cdot n \cdot p^2 / K^2 + p \cdot K \cdot n))$
+\end{itemize}
+
+où $T$ est le nombre d'itérations, $R$ le nombre d'exécutions (\texttt{n\_init}), $n$ le nombre d'individus, $p$ le nombre de variables et $K$ le nombre de clusters.
+
+\subsection{Exemple d'utilisation}
+
+\begin{verbatim}
+library(M2RClust)
+
+# Chargement des données
+data(mtcars)
+
+# Création du clusterer
+clusterer <- KMeansClusterer$new(
+  data = mtcars,
+  n_clusters = 3,
+  standardize = TRUE,
+  init_method = "homogeneity++",
+  n_init = 10,
+  seed = 42
+)
+
+# Ajustement
+clusterer$fit()
+
+# Résultats
+clusterer$summary()
+# Global Homogeneity: 0.847
+# Cluster 1 (4 vars): mpg, drat, am, gear - Homogeneity: 0.72
+# Cluster 2 (3 vars): cyl, disp, hp - Homogeneity: 0.91
+# Cluster 3 (4 vars): wt, qsec, vs, carb - Homogeneity: 0.65
+
+# Visualisation
+plot_clustering_2d(clusterer)
+\end{verbatim}
+\section{Clustering hiérarchique divisif (DivisiveClusterer)}
+
+L'algorithme \texttt{DivisiveClusterer} est inspiré de la procédure \texttt{PROC VARCLUS} du logiciel SAS \cite{sas2020varclus}. Contrairement à l'approche agglomérative (ascendante) classique, cette méthode utilise une stratégie \textbf{divisive} (descendante) où l'on part d'un unique cluster contenant toutes les variables, puis on le divise itérativement.
+
+\subsection{Principe de l'algorithme divisif}
+
+L'approche divisive présente plusieurs avantages pour le clustering de variables :
+
+\begin{itemize}
+    \item \textbf{Déterminisme} : Pas d'initialisation aléatoire, résultats 100\% reproductibles
+    \item \textbf{Interprétabilité} : Hiérarchie explicite des divisions
+    \item \textbf{Critères d'arrêt naturels} : Basés sur les valeurs propres (règle de Kaiser)
+    \item \textbf{Stabilité} : Contrairement au K-Means, chaque exécution produit le même résultat
+\end{itemize}
+
+Le principe repose sur l'analyse des valeurs propres de l'ACP locale :
+
+\begin{itemize}
+    \item \textbf{$\lambda_1$} : Première valeur propre, représente la variance expliquée par la direction principale
+    \item \textbf{$\lambda_2$} : Seconde valeur propre, indique l'hétérogénéité résiduelle du cluster
+\end{itemize}
+
+Un cluster avec $\lambda_2$ élevé est \textbf{hétérogène} : il contient des variables qui ne partagent pas la même direction principale et mérite d'être divisé.
+
+\subsection{Description détaillée de l'algorithme}
+
+\begin{figure}[h]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithme : Clustering divisif de variables (VARCLUS)}
+\vspace{0.3cm}
+
+\textbf{Entrée :} Données $\mathbf{X}$ ($n \times p$), nombre de clusters cible $K$
+
+\textbf{Sortie :} Partition hiérarchique $\mathcal{P} = \{C_1, \ldots, C_K\}$ des variables
+
+\vspace{0.2cm}
+\begin{enumerate}
+    \item \textbf{Initialisation :} Placer toutes les $p$ variables dans un unique cluster $C_1$
+    \item \textbf{Répéter} tant que le nombre de clusters $< K$ :
+    \begin{enumerate}
+        \item[(a)] \textbf{Sélection :} Identifier le cluster $C_k$ avec la plus grande seconde valeur propre $\lambda_2^{(k)}$
+        \item[(b)] \textbf{Vérification des critères d'arrêt :}
+        \begin{itemize}
+            \item Si $\lambda_2^{(k)} < 1$ (critère de Kaiser) : STOP
+            \item Si $\lambda_2^{(k)} / \lambda_1^{(k)} < \theta$ (ratio minimum) : STOP
+        \end{itemize}
+        \item[(c)] \textbf{ACP locale :} Calculer les deux premières composantes principales sur $C_k$
+        \item[(d)] \textbf{Rotation Varimax :} Appliquer une rotation orthogonale aux deux composantes
+        \item[(e)] \textbf{Division :} Affecter chaque variable au sous-groupe dont le facteur rotaté a la plus forte corrélation carrée
+    \end{enumerate}
+    \item \textbf{Retourner} la partition finale et l'historique des divisions
+\end{enumerate}
+}}
+\caption{Pseudo-code de l'algorithme de clustering divisif}
+\label{fig:divisive_algo}
+\end{figure}
+
+\subsubsection{Étape de sélection du cluster à diviser}
+
+À chaque itération, on sélectionne le cluster le plus \textbf{hétérogène}, c'est-à-dire celui dont la seconde valeur propre est maximale :
+
+\begin{equation}
+k^* = \arg\max_k \lambda_2^{(k)}
+\label{eq:select_split}
+\end{equation}
+
+Une seconde valeur propre élevée indique qu'une direction secondaire capture une part significative de la variance, suggérant la présence de deux sous-groupes distincts.
+
+\subsubsection{Rotation Varimax et division}
+
+Après extraction des deux premières composantes, une \textbf{rotation Varimax} est appliquée pour maximiser la séparation des variables entre les deux facteurs rotés. La rotation Varimax maximise la variance des carrés des loadings :
+
+\begin{equation}
+V = \sum_{j=1}^{2} \left[ \frac{1}{p_k} \sum_{i=1}^{p_k} a_{ij}^4 - \left( \frac{1}{p_k} \sum_{i=1}^{p_k} a_{ij}^2 \right)^2 \right]
+\label{eq:varimax}
+\end{equation}
+
+où $a_{ij}$ est le loading de la variable $i$ sur le facteur rotaté $j$.
+
+Chaque variable est ensuite affectée au sous-groupe correspondant au facteur rotaté avec lequel elle présente la plus forte corrélation carrée :
+
+\begin{equation}
+\text{Groupe}(X_i) = \begin{cases}
+1 & \text{si } a_{i1}^2 > a_{i2}^2 \\
+2 & \text{sinon}
+\end{cases}
+\label{eq:assignment}
+\end{equation}
+
+\subsection{Critères d'arrêt}
+
+L'algorithme propose plusieurs critères pour déterminer automatiquement le nombre optimal de clusters :
+
+\subsubsection{Critère de Kaiser}
+
+Le critère de Kaiser stipule qu'une composante est significative si sa valeur propre est supérieure à 1 (pour des données standardisées). Appliqué au clustering :
+
+\begin{equation}
+\text{Si } \max_k \lambda_2^{(k)} < 1 \Rightarrow \text{Arrêt}
+\label{eq:kaiser}
+\end{equation}
+
+Ce critère indique que plus aucun cluster ne présente d'hétérogénéité suffisante pour justifier une division.
+
+\subsubsection{Critère du ratio de valeurs propres}
+
+Un critère alternatif compare le ratio $\lambda_2 / \lambda_1$ :
+
+\begin{equation}
+\text{Si } \frac{\lambda_2^{(k^*)}}{\lambda_1^{(k^*)}} < \theta \Rightarrow \text{Arrêt}
+\label{eq:ratio}
+\end{equation}
+
+où $\theta$ est un seuil configurable (par défaut 0.1). Ce critère est plus flexible que Kaiser et s'adapte mieux aux données non standardisées.
+
+\subsection{Implémentation hybride}
+
+Notre implémentation détecte automatiquement le type de données et utilise le chemin de calcul optimal :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Type de données} & \textbf{Méthode de calcul} & \textbf{Complexité} \\
+\hline
+Purement quantitatif & \texttt{eigen(cor(X))} & $O(p^2)$ par cluster \\
+Mixte (quanti + quali) & \texttt{PCAmix} & $O(p^2 \cdot m)$ par cluster \\
+\hline
+\end{tabular}
+\caption{Chemins de calcul selon le type de données}
+\label{tab:hybrid_paths}
+\end{table}
+
+Pour les données purement numériques, la matrice de corrélation globale est pré-calculée une seule fois, puis on extrait les sous-matrices pour chaque cluster :
+
+\begin{verbatim}
+# Chemin rapide (données numériques)
+global_cor <- cor(data)  # Calculé une fois
+
+# Pour diviser le cluster k
+cor_sub <- global_cor[vars_in_k, vars_in_k]
+eigen_result <- eigen(cor_sub, symmetric = TRUE)
+\end{verbatim}
+
+\subsection{Historique des divisions}
+
+Un avantage majeur de l'approche divisive est la conservation de l'\textbf{historique des divisions}, permettant une interprétation hiérarchique des résultats :
+
+\begin{verbatim}
+# Accès à l'historique
+history <- clusterer$get_split_history()
+
+# Chaque entrée contient :
+# - iteration       : numéro de la division
+# - split_cluster   : cluster qui a été divisé
+# - eigenvalue_1    : lambda1 avant division
+# - eigenvalue_2    : lambda2 avant division
+# - eigenvalue_ratio: lambda2/lambda1
+# - variables_group1: variables du premier sous-groupe
+# - variables_group2: variables du second sous-groupe
+# - split_quality   : score de qualité de la division
+\end{verbatim}
+
+\subsection{Mesure de qualité de division}
+
+Pour chaque division, un score de qualité similaire au silhouette est calculé :
+
+\begin{equation}
+Q = \frac{\bar{r}_{intra} - \bar{r}_{inter}}{\bar{r}_{intra} + \bar{r}_{inter}}
+\label{eq:split_quality}
+\end{equation}
+
+où $\bar{r}_{intra}$ est la corrélation moyenne intra-groupe et $\bar{r}_{inter}$ la corrélation moyenne inter-groupe. Un score proche de 1 indique une division de haute qualité (forte cohésion interne, faible liaison entre groupes).
+
+\subsection{Comparaison avec KMeansClusterer}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|c|c|}
+\hline
+\textbf{Caractéristique} & \textbf{KMeansClusterer} & \textbf{DivisiveClusterer} \\
+\hline
+Stratégie & Partitionnement direct & Hiérarchique divisive \\
+Déterminisme & Non (sauf \texttt{correlation}) & Oui \\
+Sensibilité à l'initialisation & Forte & Aucune \\
+Arrêt automatique & Non & Oui (Kaiser, ratio) \\
+Historique des étapes & Non & Oui \\
+Visualisation dendrogramme & Non & Oui \\
+Complexité par itération & $O(K \cdot n \cdot p)$ & $O(p^2)$ \\
+Optimum & Local (multi-start) & Hiérarchique \\
+\hline
+\end{tabular}
+\caption{Comparaison des deux algorithmes de clustering}
+\label{tab:algo_comparison}
+\end{table}
+
+\subsection{Exemple d'utilisation}
+
+\begin{verbatim}
+library(M2RClust)
+
+# Chargement des données
+data(mtcars)
+
+# Clustering divisif avec critère de Kaiser
+clusterer <- DivisiveClusterer$new(
+  data = mtcars,
+  n_clusters = 10,        # Maximum (arrêt automatique probable avant)
+  standardize = TRUE,
+  rotation_method = "varimax",
+  stop_at_kaiser = TRUE,  # Arrêt si lambda2 < 1
+  min_cluster_size = 2
+)
+
+# Ajustement
+clusterer$fit()
+# Data mode: NUMERIC (fast correlation path)
+# Kaiser criterion: Stopping at 4 clusters (max lambda2 = 0.892 < 1.0)
+# Divisive clustering completed: 4 clusters formed in 3 iterations
+
+# Résultats
+clusterer$summary()
+
+# Historique des divisions
+history <- clusterer$get_split_history()
+print(history[[1]])
+# $iteration: 1
+# $split_cluster: 1
+# $eigenvalue_1: 6.12
+# $eigenvalue_2: 2.41
+# $eigenvalue_ratio: 0.394
+# $variables_group1: c("mpg", "cyl", "disp", "hp", "wt")
+# $variables_group2: c("drat", "qsec", "vs", "am", "gear", "carb")
+
+# Visualisation du dendrogramme divisif
+clusterer$plot_split_dendrogram()
+
+# Cercle des corrélations
+plot_clustering_2d(clusterer)
+\end{verbatim}
+
+\subsection{Visualisations spécifiques}
+
+L'algorithme divisif offre des visualisations spécifiques :
+
+\begin{itemize}
+    \item \textbf{Dendrogramme divisif} : Arbre descendant montrant l'historique des divisions avec les ratios $\lambda_2/\lambda_1$
+    \item \textbf{Cercle des corrélations} : Variables colorées par cluster avec indication de l'homogénéité
+    \item \textbf{Heatmap ordonnée} : Matrice de corrélation réordonnée par cluster
+\end{itemize}
+
+\section{Clustering de modalités (MCA\_HClusterer)}
+
+L'algorithme \texttt{MCA\_HClusterer} (également appelé \texttt{ModalitiesDiceClusterer}) propose une approche originale en se concentrant sur les \textbf{modalités} (niveaux des variables catégorielles) plutôt que sur les variables elles-mêmes. Cette méthode combine l'Analyse des Correspondances Multiples (ACM) avec une Classification Ascendante Hiérarchique (CAH) pour regrouper les modalités similaires.
+
+\subsection{Principe fondamental}
+
+Contrairement aux deux algorithmes précédents qui groupent des variables, cette méthode travaille au niveau des modalités individuelles. L'objectif est d'identifier des profils de modalités qui co-occurrent fréquemment ou qui sont structurellement similaires dans leur distribution.
+
+\subsubsection{Représentation disjonctive}
+
+La première étape consiste à transformer les données catégorielles en une \textbf{matrice disjonctive complète} (ou tableau disjonctif). Pour une variable $X$ avec $m$ modalités, on crée $m$ colonnes binaires :
+
+\begin{equation}
+Y_{ij}^{(k)} = \begin{cases}
+1 & \text{si l'individu } i \text{ possède la modalité } k \text{ de la variable } j \\
+0 & \text{sinon}
+\end{cases}
+\end{equation}
+
+Par exemple, une variable "Couleur" avec les modalités \{Rouge, Bleu, Vert\} génère trois colonnes : \texttt{Couleur.Rouge}, \texttt{Couleur.Bleu}, \texttt{Couleur.Vert}.
+
+\subsubsection{Discrétisation automatique}
+
+Pour traiter des données mixtes, l'algorithme propose une \textbf{discrétisation automatique} des variables quantitatives en les transformant en \texttt{n\_bins} classes basées sur les quantiles. Cette approche permet d'appliquer la méthode à des jeux de données comportant à la fois des variables qualitatives et quantitatives.
+
+\subsection{Mesures de dissimilarité entre modalités}
+
+L'algorithme propose deux mesures de dissimilarité pour quantifier la distance entre modalités :
+
+\subsubsection{Dissimilarité de Dice (par défaut)}
+
+La dissimilarité de Dice est calculée à partir des vecteurs binaires de la matrice disjonctive. Pour deux modalités $j$ et $k$ représentées par les colonnes binaires $\mathbf{y}_j$ et $\mathbf{y}_k$, la distance de Dice au carré est définie comme :
+
+\begin{equation}
+d^2_{Dice}(j, k) = \frac{1}{2} \sum_{i=1}^{n} (y_{ij} - y_{ik})^2
+\label{eq:dice_distance}
+\end{equation}
+
+où $n_j = \sum_{i=1}^{n} y_{ij}$ est l'effectif de la modalité $j$.
+
+\subsubsection{Dissimilarité basée sur le V de Cramér}
+
+Alternativement, on peut utiliser le coefficient de Cramér transformé en dissimilarité. Pour deux modalités, on construit un tableau de contingence $2 \times 2$ et on calcule :
+
+\begin{equation}
+V^2 = \frac{\chi^2}{n \cdot \min(r-1, c-1)}
+\end{equation}
+
+La dissimilarité est alors définie comme :
+\begin{equation}
+d^2_{Cramer}(j, k) = (1 - V(j, k))^2
+\label{eq:cramer_distance}
+\end{equation}
+
+\subsection{Classification Ascendante Hiérarchique}
+
+Une fois la matrice de dissimilarité $\mathbf{D}$ calculée entre toutes les paires de modalités, l'algorithme applique une CAH classique avec la méthode de Ward (ou toute autre méthode de linkage spécifiée). La figure \ref{fig:mca_hclust_algo} présente l'algorithme complet.
+
+\begin{figure}[htbp]
+\centering
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Algorithme : Clustering de modalités (MCA\_HClusterer)}
+\vspace{0.3cm}
+
+\textbf{Entrée :} Données catégorielles $\mathbf{X}$ ($n \times p$), nombre de groupes $K$, méthode de linkage
+
+\textbf{Sortie :} Partition $\mathcal{P} = \{G_1, \ldots, G_K\}$ des modalités
+
+\vspace{0.2cm}
+\begin{enumerate}
+    \item \textbf{Transformation disjonctive :} Si \texttt{auto\_discretize = TRUE}, discrétiser les variables numériques. Créer la matrice disjonctive $\mathbf{Y}$ ($n \times m$), où $m$ est le nombre total de modalités.
+    
+    \item \textbf{Calcul de la dissimilarité :} Pour chaque paire de modalités $(j, k)$, calculer $d^2(j, k)$ selon la mesure choisie (Dice ou Cramér). Construire la matrice $\mathbf{D}$ ($m \times m$).
+    
+    \item \textbf{Clustering hiérarchique :} Appliquer \texttt{hclust()} sur $\mathbf{D}$ avec la méthode de linkage spécifiée. Couper le dendrogramme en $K$ groupes.
+    
+    \item \textbf{Calcul des statistiques :} Pour chaque groupe $G_k$, calculer le centre, la décomposition de l'inertie et les contributions des modalités.
+    
+    \item \textbf{Retourner} la partition des modalités, les statistiques et l'objet \texttt{hclust}.
+\end{enumerate}
+}}
+\caption{Pseudo-code de l'algorithme de clustering de modalités}
+\label{fig:mca_hclust_algo}
+\end{figure}
+
+\subsection{Statistiques et diagnostics}
+
+L'implémentation calcule et met en cache plusieurs statistiques pour faciliter l'interprétation des résultats.
+
+\subsubsection{Profils des groupes}
+
+Plutôt que de calculer un centre géométrique explicite, l'algorithme caractérise chaque groupe par la distribution des fréquences de ses modalités. Pour un groupe $G_k$, on calcule les fréquences relatives de chaque modalité constitutive :
+
+\begin{equation}
+p_{j|k} = \frac{n_j}{\sum_{l \in G_k} n_l}
+\end{equation}
+
+Cela permet d'identifier les modalités dominantes au sein de chaque cluster.
+
+\subsubsection{Décomposition de l'inertie}
+
+L'inertie est calculée directement à partir de la matrice des distances au carré $\mathbf{D}^2$. L'inertie totale est définie comme la moyenne des distances au carré entre toutes les paires de modalités :
+
+\begin{equation}
+I_{total} = \frac{1}{2m} \sum_{j=1}^{m} \sum_{l=1}^{m} d^2(j, l)
+\end{equation}
+
+L'inertie intra-classe pour un groupe $G_k$ de taille $m_k$ est :
+
+\begin{equation}
+I_{intra}(G_k) = \frac{1}{2m_k} \sum_{j \in G_k} \sum_{l \in G_k} d^2(j, l)
+\end{equation}
+
+L'inertie inter-classe est obtenue par soustraction : $I_{inter} = I_{total} - \sum I_{intra}(G_k)$.
+Le critère de qualité est $R^2 = I_{inter}/I_{total}$.
+
+\subsubsection{Contributions des modalités}
+
+La contribution d'une modalité $j$ à l'inertie totale est calculée comme la moyenne des distances au carré vers toutes les autres modalités :
+
+\begin{equation}
+CTR_j = \frac{1}{m-1} \sum_{l \neq j} d^2(j, l)
+\end{equation}
+
+Cette mesure permet d'identifier les modalités les plus "centrales" ou "excentrées" dans l'espace global des données.
+
+\subsection{Analyse des Correspondances Multiples (ACM)}
+
+Pour faciliter la visualisation, l'algorithme intègre une ACM sur la matrice disjonctive. L'ACM généralise l'Analyse Factorielle des Correspondances aux tableaux à plus de deux variables.
+
+\subsubsection{Principe de l'ACM}
+
+L'implémentation s'appuie sur le package \texttt{FactoMineR} pour réaliser une décomposition en valeurs propres robuste de la matrice :
+
+\begin{equation}
+\mathbf{M} = \mathbf{D}_n^{-1} \mathbf{Y}^T \mathbf{D}_n^{-1} \mathbf{Y} \mathbf{D}_m^{-1}
+\end{equation}
+
+où $\mathbf{D}_n$ et $\mathbf{D}_m$ sont des matrices diagonales de pondération.
+
+Les coordonnées des modalités sur les axes factoriels permettent une visualisation en 2D ou 3D qui préserve au mieux les distances entre modalités, ce qui n'est pas le cas avec une éventuelle projection de Dice.
+
+\subsubsection{Projection de variables illustratives}
+
+L'algorithme permet de projeter des variables illustratives (supplémentaires) dans l'espace factoriel sans modifier la solution. Pour une modalité illustrative $\mathbf{y}_{illus}$, les coordonnées sont calculées comme :
+
+\begin{equation}
+\mathbf{coord}_{illus} = \mathbf{D}_n^{-1} \mathbf{Y}^T \mathbf{y}_{illus}
+\end{equation}
+
+Cette fonctionnalité est utile pour :
+\begin{itemize}
+    \item Valider la stabilité du clustering sur de nouvelles données
+    \item Identifier à quel groupe une nouvelle modalité serait associée
+    \item Analyser la position d'une variable non incluse dans le clustering
+\end{itemize}
+
+On peut aussi les projeter sur un plan factoriel pour observer leurs similarités avec les autres modalités.
+
+\subsection{Méthodes de recoupage}
+
+Une particularité intéressante de cette implémentation est la méthode \texttt{cut\_tree()} qui permet de \textbf{recouper} le dendrogramme en un nombre différent de groupes sans recalculer les distances ni refaire la CAH :
+
+\begin{verbatim}
+# Recoupage rapide
+clusterer$fit(data)         # K = 3 (par défaut)
+clusterer$cut_tree(5)       # Passer à K = 5
+clusterer$summary()         # Nouvelles statistiques calculées
+\end{verbatim}
+
+Cette approche est très efficace pour explorer différentes valeurs de $K$ et identifier le nombre optimal de groupes.
+
+\subsection{Complexité algorithmique}
+
+La complexité totale de l'algorithme, bien qu'efficace sur la plupart des jeux de données, peut s'avérer lent sur de très grand jeux de données, et est dominée par plusieurs étapes :
+
+\begin{itemize}
+    \item \textbf{Création de la matrice disjonctive :} $O(n \cdot p)$ où $n$ est le nombre d'individus et $p$ le nombre de variables
+    \item \textbf{Calcul de la matrice de dissimilarité :} $O(m^2 \cdot n)$ où $m$ est le nombre total de modalités
+    \item \textbf{CAH :} $O(m^2 \log m)$ avec des structures de données optimisées
+    \item \textbf{ACM (si visualisation) :} $O(n \cdot m^2)$ pour la décomposition SVD
+\end{itemize}
+
+La complexité globale est donc $O(n \cdot m^2 + m^2 \log m)$, ce qui reste raisonnable pour des jeux de données de taille moyenne, mais peut s'avérer lent pour un jeu de données très large.
+
+\subsection{Exemple d'utilisation}
+
+\begin{verbatim}
+library(M2RClust)
+
+# Données mixtes (catégorielles + numériques)
+data(mtcars)
+df <- data.frame(
+  cyl = factor(mtcars$cyl),
+  am = factor(mtcars$am),
+  vs = factor(mtcars$vs),
+  mpg = mtcars$mpg,
+  hp = mtcars$hp
+)
+
+# Création du clusterer avec discrétisation automatique
+clusterer <- ModalitiesDiceClusterer$new(
+  n_groups = 4,
+  linkage = "ward.D2",
+  dissimilarity = "dice",
+  auto_discretize = TRUE,
+  n_bins = 4
+)
+
+# Ajustement
+clusterer$fit(df)
+
+# Résultats
+clusterer$summary()
+# Groupe 1 (5 modalités): cyl.4, am.1, mpg_Q4, hp_Q1, vs.1
+#   - Inertie intra: 0.15
+#   - Contributions principales: cyl.4 (35%), am.1 (28%)
+# 
+# Groupe 2 (4 modalités): cyl.8, mpg_Q1, hp_Q4, vs.0
+#   - Inertie intra: 0.12
+#   - Contributions principales: cyl.8 (42%), hp_Q4 (31%)
+# ...
+
+# Visualisations
+clusterer$plot_dendrogram()              # Dendrogramme avec rectangles
+clusterer$plot_mca()                     # Projection ACM des modalités
+clusterer$plot_clusters(add_ellipses = TRUE)  # Modalités colorées par groupe
+
+# Table des résultats
+results <- clusterer$get_cluster_table()
+print(results)
+#   modality       cluster frequency
+# 1 cyl.4              1        11
+# 2 cyl.6              3         7
+# 3 cyl.8              2        14
+# ...
+
+# Projection d'une variable illustrative
+illus_var <- factor(ifelse(mtcars$gear > 3, "high_gear", "low_gear"))
+proj <- clusterer$predict_illustrative(illus_var)
+print(proj$by_group)  # Distance moyenne par groupe
+
+# Explorer différentes valeurs de K
+clusterer$cut_tree(6)
+clusterer$summary()
+\end{verbatim}
+\subsection{Implémentation R6 et architecture}
+
+L'implémentation suit les mêmes principes architecturaux que les autres clusterers du package :
+
+\begin{verbatim}
+ModalitiesDiceClusterer <- R6::R6Class(
+  "ModalitiesDiceClusterer",
+  public = list(
+    # Champs publics
+    n_groups = NULL,
+    linkage = NULL,
+    dissimilarity = NULL,
+    disj = NULL,      # Matrice disjonctive
+    d2 = NULL,        # Matrice de dissimilarité au carré
+    hclust = NULL,    # Objet hclust
+    groups = NULL,    # Assignation des modalités
+    fitted = FALSE,
+    
+    # Méthodes principales
+    initialize = function(...) { ... },
+    fit = function(data) { ... },
+    cut_tree = function(k) { ... },
+    predict_illustrative = function(illus) { ... },
+    
+    # Méthodes de visualisation
+    plot_dendrogram = function() { ... },
+    plot_mca = function(...) { ... },
+    plot_clusters = function(...) { ... },
+    
+    # Accesseurs
+    get_cluster_table = function() { ... },
+    get_dice_matrix = function(...) { ... },
+    summary = function() { ... }
+  ),
+  private = list(
+    # Méthodes privées pour calculs internes
+    compute_dice_matrix = function() { ... },
+    compute_cramer_matrix = function() { ... },
+    discretize_numeric = function(...) { ... },
+    compute_group_stats = function() { ... },
+    compute_mca = function() { ... }
+  )
+)
+\end{verbatim}
+
+%--- Application
+\chapter{3.Fonctions transverses}
+Ce chapitre présente les modules auxiliaires du package qui fournissent des fonctionnalités communes à tous les algorithmes de clustering : fonctions utilitaires bas niveau, méthodes de sélection du nombre de clusters, et outils de visualisation.
+
+\section{Fonctions utilitaires (module 00\_utils)}
+
+Le module \texttt{00\_utils.R} regroupe les fonctions mathématiques et de manipulation de données utilisées par les algorithmes de clustering.
+
+\subsection{Standardisation des données}
+
+La standardisation est une étape cruciale pour le clustering de variables, car elle permet de rendre comparables des variables mesurées dans des unités différentes.
+
+\subsubsection{Fonction \texttt{standardize\_data()}}
+
+Cette fonction centre et réduit les données :
+
+\begin{equation}
+z_{ij} = \frac{x_{ij} - \bar{x}_j}{s_j}
+\end{equation}
+
+où $\bar{x}_j$ est la moyenne de la variable $j$ et $s_j$ son écart-type.
+
+\begin{verbatim}
+standardize_data <- function(data, center = TRUE, scale = TRUE) {
+  scaled_data <- scale(data, center = center, scale = scale)
+  
+  # Sauvegarde des paramètres pour application ultérieure
+  result <- as.data.frame(scaled_data)
+  attr(result, "centers") <- attr(scaled_data, "scaled:center")
+  attr(result, "scales") <- attr(scaled_data, "scaled:scale")
+  
+  return(result)
+}
+\end{verbatim}
+
+\subsubsection{Fonction \texttt{apply\_standardization()}}
+
+Permet d'appliquer les paramètres de standardisation calculés sur les données d'entraînement à de nouvelles données (variables supplémentaires) :
+
+\begin{verbatim}
+apply_standardization <- function(data, centers, scales)
+\end{verbatim}
+
+Cette fonction est essentielle pour la méthode \texttt{predict()} des clusterers, garantissant que les nouvelles variables sont transformées de manière cohérente.
+
+\subsection{Matrice de distances basée sur les corrélations}
+
+La fonction \texttt{get\_correlation\_distance\_matrix()} calcule une matrice de distances euclidiennes entre variables, adaptée au clustering de variables.
+
+\subsubsection{Cas des données quantitatives}
+
+Pour deux variables quantitatives $X_i$ et $X_j$, la distance est définie par :
+
+\begin{equation}
+d(X_i, X_j) = \sqrt{2(1 - r_{ij})}
+\label{eq:cor_distance}
+\end{equation}
+
+où $r_{ij}$ est le coefficient de corrélation de Pearson. Cette transformation garantit que la distance est euclidienne et varie entre 0 (corrélation parfaite) et $\sqrt{2}$ (corrélation parfaitement négative).
+
+\subsubsection{Cas des données mixtes}
+
+Pour les données mixtes, la fonction utilise des mesures d'association appropriées :
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|l|l|}
+\hline
+\textbf{Type de paire} & \textbf{Mesure} & \textbf{Formule de similarité} \\
+\hline
+Quanti-Quanti & Corrélation de Pearson & $sim = r^2$ \\
+Quali-Quali & V de Cramér & $sim = V^2 = \frac{\chi^2}{n \cdot \min(r-1, c-1)}$ \\
+Quanti-Quali & Rapport de corrélation & $sim = \eta^2 = \frac{SS_{between}}{SS_{total}}$ \\
+\hline
+\end{tabular}
+\caption{Mesures d'association pour données mixtes}
+\end{table}
+
+La distance finale est calculée par $d = \sqrt{2(1 - sim)}$, garantissant une métrique euclidienne cohérente quel que soit le type de variables.
+
+\subsection{Distance euclidienne classique}
+
+La fonction \texttt{euclidean\_distance()} calcule les distances entre des points et des centres de clusters :
+
+\begin{verbatim}
+euclidean_distance <- function(points, centers) {
+  # Retourne une matrice [n_centers x n_points]
+  # Element [i,j] = distance du centre i au point j
+}
+\end{verbatim}
+
+Cette fonction est utilisée en interne par certaines méthodes d'initialisation.
+
+\section{Sélection du nombre de clusters (module 05)}
+
+Le choix du nombre optimal de clusters $K$ est un problème fondamental en clustering. Le module \texttt{05\_cluster\_validator.R} implémente trois méthodes complémentaires.
+
+\subsection{Méthode du coude (Elbow)}
+
+\subsubsection{Principe}
+
+La méthode du coude trace l'évolution d'un critère de qualité en fonction de $K$ et identifie le point d'inflexion (« coude ») où l'amélioration marginale devient négligeable.
+
+Pour le clustering de variables, le critère utilisé est $(1 - H_{global})$ où $H_{global}$ est l'homogénéité globale. Ce critère décroît avec $K$ (plus de clusters = meilleure homogénéité).
+
+\subsubsection{Détection automatique du coude}
+
+L'algorithme identifie le coude comme le point le plus éloigné de la droite reliant le premier et le dernier point de la courbe :
+
+\begin{equation}
+K^* = \arg\max_k \frac{|(y_n - y_1) \cdot k - (K_n - K_1) \cdot y_k + K_n \cdot y_1 - y_n \cdot K_1|}{\sqrt{(y_n - y_1)^2 + (K_n - K_1)^2}}
+\end{equation}
+
+\begin{verbatim}
+elbow_method <- function(clusterer_class, data, k_range = 2:10, 
+                         plot = TRUE, ...)
+\end{verbatim}
+
+\subsection{Méthode de la silhouette}
+
+\subsubsection{Principe}
+
+Le coefficient de silhouette mesure la cohésion intra-cluster et la séparation inter-cluster. Pour chaque variable $i$ :
+
+\begin{equation}
+s(i) = \frac{b(i) - a(i)}{\max(a(i), b(i))}
+\end{equation}
+
+où :
+\begin{itemize}
+    \item $a(i)$ : distance moyenne de $i$ aux autres variables de son cluster
+    \item $b(i)$ : distance moyenne minimale de $i$ aux variables des autres clusters
+\end{itemize}
+
+\subsubsection{Adaptation au clustering de variables}
+
+La silhouette utilise la matrice de distances basée sur les corrélations (équation \ref{eq:cor_distance}), ce qui est plus approprié pour le clustering de variables que les distances euclidiennes classiques.
+
+\begin{verbatim}
+silhouette_method <- function(clusterer_class, data, k_range = 2:10,
+                              plot = TRUE, ...)
+\end{verbatim}
+
+Le $K$ optimal maximise la silhouette moyenne. Un coefficient proche de 1 indique des clusters bien définis, proche de 0 des clusters chevauchants, et négatif des assignations incorrectes.
+
+\subsection{Indice de Calinski-Harabasz (Pseudo-F)}
+
+\subsubsection{Principe}
+
+L'indice de Calinski-Harabasz équilibre qualité du clustering et parcimonie en pénalisant le nombre de clusters :
+
+\begin{equation}
+CH(K) = \frac{(H_{total} - 1) / (K - 1)}{(p - H_{total}) / (p - K)}
+\end{equation}
+
+où $H_{total} = H_{global} \times p$ est l'inertie expliquée totale et $p$ le nombre de variables.
+
+\begin{verbatim}
+calinski_harabasz_method <- function(clusterer_class, data, 
+                                     k_range = 2:10, plot = TRUE, ...)
+\end{verbatim}
+
+Le $K$ optimal maximise cet indice. Cette méthode tend à favoriser des partitions plus parcimonieuses.
+
+\subsection{Comparaison et consensus}
+
+La fonction \texttt{compare\_k\_selection\_methods()} exécute les trois méthodes et détermine un consensus par vote majoritaire :
+
+\begin{verbatim}
+results <- compare_k_selection_methods(
+  KMeansClusterer, 
+  data, 
+  k_range = 2:8
+)
+# Affiche 3 graphiques et retourne:
+# - results$consensus_k : K recommandé (majorité 2/3)
+# - results$elbow$suggested_k
+# - results$silhouette$suggested_k  
+# - results$homogeneity$suggested_k
+\end{verbatim}
+
+Si les trois méthodes divergent, la méthode du coude est utilisée par défaut.
+
+\section{Visualisation des résultats (module 06)}
+
+Le module \texttt{06\_visualization.R} fournit des fonctions génériques compatibles avec tous les clusterers du package.
+
+\subsection{Cercle des corrélations}
+
+\subsubsection{Fonction \texttt{plot\_clustering\_2d()}}
+
+Projette les variables sur les deux premières composantes principales d'une ACP globale :
+
+\begin{verbatim}
+plot_clustering_2d(clusterer, main = NULL, 
+                   show_centers = TRUE, show_labels = TRUE)
+\end{verbatim}
+
+\begin{itemize}
+    \item Les variables sont représentées par des \textbf{flèches} partant de l'origine
+    \item La \textbf{longueur} indique la qualité de représentation dans le plan
+    \item La \textbf{couleur} indique l'appartenance au cluster
+    \item Le \textbf{cercle unité} aide à identifier les variables bien représentées
+    \item Le ratio d'aspect \texttt{asp=1} préserve les angles (corrélations)
+\end{itemize}
+
+\subsubsection{Fonction \texttt{plot\_clustering\_with\_supp()}}
+
+Variante distinguant les variables actives (trait plein) des variables supplémentaires (trait pointillé) après appel à \texttt{predict()}.
+
+\subsection{Heatmap des corrélations}
+
+\begin{verbatim}
+plot_correlation_heatmap(clusterer, main = "...", reorder = TRUE)
+\end{verbatim}
+
+Affiche la matrice de corrélation avec :
+\begin{itemize}
+    \item Réordonnancement des variables par cluster (si \texttt{reorder = TRUE})
+    \item Séparateurs noirs entre clusters
+    \item Échelle de couleurs : bleu (corrélation négative) → blanc → rouge (positive)
+\end{itemize}
+
+\subsection{Graphe de réseau}
+
+\begin{verbatim}
+plot_network_graph(clusterer, threshold = 0.3, 
+                   layout = "fruchterman.reingold")
+\end{verbatim}
+
+Représentation en graphe où :
+\begin{itemize}
+    \item Les \textbf{nœuds} sont les variables, colorées par cluster
+    \item Les \textbf{arêtes} relient les variables dont l'association dépasse le seuil
+    \item Trois algorithmes de disposition : Fruchterman-Reingold, cercle, Kamada-Kawai
+\end{itemize}
+
+Nécessite le package optionnel \texttt{igraph}. Sans lui, un graphique alternatif est affiché.
+
+\subsection{Métriques de qualité}
+
+\subsubsection{Fonction \texttt{plot\_cluster\_quality()}}
+
+Affiche deux graphiques :
+\begin{enumerate}
+    \item \textbf{Taille des clusters} : nombre de variables par cluster
+    \item \textbf{Homogénéité par cluster} : variance expliquée par PC1
+\end{enumerate}
+
+\subsubsection{Fonction \texttt{plot\_variable\_contributions()}}
+
+Visualise les contributions des variables à chaque cluster :
+
+\begin{verbatim}
+plot_variable_contributions(clusterer, cluster_id = NULL, top_n = 10)
+\end{verbatim}
+
+Affiche les \texttt{top\_n} variables les plus contributives (loadings PC1 en valeur absolue) pour chaque cluster ou un cluster spécifique.
+
+\subsubsection{Fonction \texttt{plot\_scree\_by\_cluster()}}
+
+Crée un scree plot par cluster montrant :
+\begin{itemize}
+    \item Barres : pourcentage de variance par composante principale
+    \item Ligne rouge : variance cumulée
+\end{itemize}
+
+Utile pour évaluer si un cluster est bien résumé par sa première composante ou s'il est intrinsèquement multidimensionnel.
+
+\subsection{Dendrogramme}
+
+\begin{verbatim}
+plot_dendrogram(clusterer, main = "Dendrogram", ...)
+\end{verbatim}
+
+Détecte automatiquement le type de clusterer :
+\begin{itemize}
+    \item \textbf{DivisiveClusterer} : appelle \texttt{plot\_split\_dendrogram()} (arbre descendant)
+    \item \textbf{MCA\_HClusterer} : utilise le dendrogramme standard de la CAH
+\end{itemize}
+
+\subsection{Synthèse des fonctions de visualisation}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|p{6cm}|l|}
+\hline
+\textbf{Fonction} & \textbf{Usage} & \textbf{Dépendance} \\
+\hline
+\texttt{plot\_clustering\_2d} & Cercle des corrélations & Base R \\
+\texttt{plot\_clustering\_with\_supp} & Avec variables supplémentaires & Base R \\
+\texttt{plot\_correlation\_heatmap} & Matrice de corrélation & Base R \\
+\texttt{plot\_network\_graph} & Graphe de réseau & igraph (optionnel) \\
+\texttt{plot\_cluster\_quality} & Tailles et homogénéités & Base R \\
+\texttt{plot\_variable\_contributions} & Contributions à PC1 & Base R \\
+\texttt{plot\_scree\_by\_cluster} & Variance par composante & Base R \\
+\texttt{plot\_dendrogram} & Arbre hiérarchique & Base R \\
+\hline
+\end{tabular}
+\caption{Récapitulatif des fonctions de visualisation}
+\end{table}
+
+%--- Application
+\chapter{4.Application R Shiny}
+
+Ce chapitre présente l'application Shiny développée pour exploiter le package M2RClust de manière interactive. L'interface permet aux utilisateurs de charger des données, de configurer et d'exécuter des analyses de clustering, puis de visualiser les résultats sans nécessiter de compétences en programmation R.
+
+\section{Architecture et fonctionnalités globales}
+
+L'application suit une architecture modulaire avec séparation des composants UI et serveur pour chaque page (Accueil, Upload, Clustering). Cette organisation facilite la maintenance et l'extensibilité du code.
+
+\begin{verbatim}
+shinyR/
+|-- main.R                    # Point d'entrée de l'application
+|-- ui.R                      # Définition de l'interface utilisateur
+|-- server.R                  # Logique serveur principale
+|-- ui/                       # Modules UI par page
+|   |-- home.R
+|   |-- upload.R
+|   |-- cluster.R
+|-- server/                   # Modules serveur par page
+|   |-- home_server.R
+|   |-- upload_server.R
+|   |-- cluster_server.R
+|-- texts/                    # Ressources textuelles
+    |-- dictionnary.csv       # Traductions FR/EN
+    |-- markdowns/
+        |-- home_en.md
+        |-- home_fr.md
+\end{verbatim}
+\subsection{Fonctionnalités transversales}
+
+Deux fonctionnalités sont accessibles depuis l'en-tête de l'application :
+
+\begin{itemize}
+    \item \textbf{Changement de thème} : Basculement entre thème clair (Flatly) et sombre (Darkly) via \texttt{bslib}
+    \item \textbf{Internationalisation} : Support bilingue français/anglais géré par un système de traduction réactif basé sur un fichier CSV
+\end{itemize}
+
+\subsection{Programmation réactive}
+
+L'application utilise intensivement le paradigme réactif de Shiny pour assurer une interface fluide et performante :
+
+\begin{itemize}
+    \item \textbf{Mise en cache} : Les données chargées sont conservées en mémoire et rechargées uniquement si le fichier source est modifié
+    \item \textbf{Valeurs réactives} : Les états (thème, langue, données, résultats) sont gérés via \texttt{reactiveValues()}, permettant une synchronisation automatique de l'interface
+    \item \textbf{Isolation des calculs} : Utilisation de \texttt{observeEvent} et \texttt{reactive()} pour limiter les recalculs aux modifications pertinentes
+\end{itemize}
+
+\section{Workflow de l'application}
+
+\subsection{Page d'accueil}
+
+Présente le contexte du projet, les objectifs et les instructions d'utilisation. Le contenu est chargé dynamiquement depuis des fichiers Markdown selon la langue sélectionnée.
+
+\subsection{Page de chargement des données}
+
+Cette page permet de :
+
+\begin{enumerate}
+    \item \textbf{Importer un fichier} : Formats CSV et XLSX supportés (jusqu'à 500 Mo)
+    \item \textbf{Configurer les variables} :
+    \begin{itemize}
+        \item Détection automatique des types (quantitative/qualitative)
+        \item Assignation des rôles : \textit{Active} (utilisée pour le clustering), \textit{Illustrative} (projetée a posteriori), \textit{Excluded} (ignorée)
+        \item Édition des noms de colonnes si souhaité
+    \end{itemize}
+    \item \textbf{Prévisualiser les données} : Aperçu tabulaire des premières lignes
+\end{enumerate}
+
+Les variables configurées sont stockées dans un objet réactif qui alimente ensuite les algorithmes de clustering.
+
+\subsection{Page de clustering}
+
+\subsubsection{Configuration}
+
+L'utilisateur sélectionne un algorithme parmi trois options :
+
+\begin{itemize}
+    \item \textbf{K-Means} : Réallocation dynamique avec choix de la méthode d'initialisation (random, k-means++, PCA)
+    \item \textbf{Hierarchical} : Division hiérarchique (PDDP) avec option de rotation des axes
+    \item \textbf{Mixed} : Approche hybride ACM + CAH pour variables qualitatives avec choix de la liaison
+\end{itemize}
+
+Les paramètres principaux incluent le nombre de clusters souhaités, le nombre maximal d'itérations et le seuil de convergence. Des paramètres avancés spécifiques à chaque algorithme sont accessibles via un panneau dépliable.
+
+\subsubsection{Exécution et résultats}
+
+Chaque exécution génère dynamiquement un nouvel onglet de résultats contenant :
+
+\begin{itemize}
+    \item \textbf{Tableau d'assignation} : Liste des variables avec leur cluster et degré d'appartenance
+    \item \textbf{Métriques de qualité} : Taille des clusters, homogénéité, variance expliquée
+    \item \textbf{Visualisations interactives} : Cercle des corrélations, dendrogramme ou plan factoriel selon l'algorithme (via \texttt{plotly})
+    \item \textbf{Options d'export} : Téléchargement des résultats en CSV et des graphiques en PNG/HTML
+\end{itemize}
+
+L'utilisateur peut lancer plusieurs analyses successives et comparer les résultats via les différents onglets créés dynamiquement.
+
+
+%--- Conclusion
+\chapter*{Conclusion}
+Ce projet a permis de développer un package R complet dédié au clustering de variables. Les trois algorithmes (K-Means, hiérarchique divisif, et approche hybride ACM+CAH) créées permettent d'analyser efficacement des jeux de données selon des approches diverses et variées. L'architecture R6 garantit maintenabilité et extensibilité, si l'on veut rajouter des méthodes aux différentes classes. Les tables et visualisations riches que les algorithmes retournent simplifient l'utilisation et l'exploitation des classes dans un contexte plus opérationnel que développeur. Enfin, l'interface Shiny rajoute une dernière couche à l'utilisateur pour qu'il puisse réaliser ces clustering en No-Code.
+
+
+
+%--- Bibliographie
+\renewcommand{\bibname}{Bibliographie}
+\bibliographystyle{plain}
+\bibliography{bibliographie}
+
+\end{document}

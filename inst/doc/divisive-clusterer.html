@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<meta name="author" content="M2RClust Team" />
+
+<meta name="date" content="2025-12-02" />
+
+<title>Complete Guide to DivisiveClusterer</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+span.underline{text-decoration: underline;}
+div.column{display: inline-block; vertical-align: top; width: 50%;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+</style>
+
+
+
+<style type="text/css">
+code {
+white-space: pre;
+}
+.sourceCode {
+overflow: visible;
+}
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+{ counter-reset: source-line 0; }
+pre.numberSource code > span
+{ position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+{ content: counter(source-line);
+position: relative; left: -1em; text-align: right; vertical-align: baseline;
+border: none; display: inline-block;
+-webkit-touch-callout: none; -webkit-user-select: none;
+-khtml-user-select: none; -moz-user-select: none;
+-ms-user-select: none; user-select: none;
+padding: 0 4px; width: 4em;
+color: #aaaaaa;
+}
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa; padding-left: 4px; }
+div.sourceCode
+{ }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } 
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.at { color: #7d9029; } 
+code span.bn { color: #40a070; } 
+code span.bu { color: #008000; } 
+code span.cf { color: #007020; font-weight: bold; } 
+code span.ch { color: #4070a0; } 
+code span.cn { color: #880000; } 
+code span.co { color: #60a0b0; font-style: italic; } 
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.do { color: #ba2121; font-style: italic; } 
+code span.dt { color: #902000; } 
+code span.dv { color: #40a070; } 
+code span.er { color: #ff0000; font-weight: bold; } 
+code span.ex { } 
+code span.fl { color: #40a070; } 
+code span.fu { color: #06287e; } 
+code span.im { color: #008000; font-weight: bold; } 
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } 
+code span.kw { color: #007020; font-weight: bold; } 
+code span.op { color: #666666; } 
+code span.ot { color: #007020; } 
+code span.pp { color: #bc7a00; } 
+code span.sc { color: #4070a0; } 
+code span.ss { color: #bb6688; } 
+code span.st { color: #4070a0; } 
+code span.va { color: #19177c; } 
+code span.vs { color: #4070a0; } 
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } 
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    var j = 0;
+    while (j < rules.length) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") {
+        j++;
+        continue;
+      }
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') {
+        j++;
+        continue;
+      }
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Complete Guide to DivisiveClusterer</h1>
+<h3 class="subtitle">Divisive Variable Clustering (VARCLUS-style)</h3>
+<h4 class="author">M2RClust Team</h4>
+<h4 class="date">2025-12-02</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#introduction" id="toc-introduction">Introduction</a>
+<ul>
+<li><a href="#advantages-of-divisive-clustering" id="toc-advantages-of-divisive-clustering">Advantages of Divisive
+Clustering</a></li>
+<li><a href="#algorithm-principle" id="toc-algorithm-principle">Algorithm Principle</a></li>
+</ul></li>
+<li><a href="#installation-and-loading" id="toc-installation-and-loading">Installation and Loading</a></li>
+<li><a href="#example-data" id="toc-example-data">Example Data</a></li>
+<li><a href="#basic-usage" id="toc-basic-usage">Basic Usage</a>
+<ul>
+<li><a href="#creating-and-fitting" id="toc-creating-and-fitting">Creating and Fitting</a></li>
+<li><a href="#detailed-summary" id="toc-detailed-summary">Detailed
+Summary</a></li>
+</ul></li>
+<li><a href="#split-history" id="toc-split-history">Split History</a>
+<ul>
+<li><a href="#consulting-the-history" id="toc-consulting-the-history">Consulting the History</a></li>
+<li><a href="#summary-table" id="toc-summary-table">Summary
+Table</a></li>
+</ul></li>
+<li><a href="#dendrogram-visualization" id="toc-dendrogram-visualization">Dendrogram Visualization</a></li>
+<li><a href="#stopping-criteria" id="toc-stopping-criteria">Stopping
+Criteria</a>
+<ul>
+<li><a href="#kaiser-criterion" id="toc-kaiser-criterion">Kaiser
+Criterion</a></li>
+<li><a href="#eigenvalue-ratio" id="toc-eigenvalue-ratio">Eigenvalue
+Ratio</a></li>
+<li><a href="#minimum-cluster-size" id="toc-minimum-cluster-size">Minimum Cluster Size</a></li>
+</ul></li>
+<li><a href="#rotation-methods" id="toc-rotation-methods">Rotation
+Methods</a>
+<ul>
+<li><a href="#varimax-default" id="toc-varimax-default">Varimax
+(default)</a></li>
+<li><a href="#promax" id="toc-promax">Promax</a></li>
+<li><a href="#no-rotation" id="toc-no-rotation">No Rotation</a></li>
+</ul></li>
+<li><a href="#cluster-selection-criterion" id="toc-cluster-selection-criterion">Cluster Selection Criterion</a>
+<ul>
+<li><a href="#by-λ₂-default" id="toc-by-λ₂-default">By λ₂
+(default)</a></li>
+<li><a href="#by-homogeneity" id="toc-by-homogeneity">By
+Homogeneity</a></li>
+</ul></li>
+<li><a href="#visualizations" id="toc-visualizations">Visualizations</a>
+<ul>
+<li><a href="#best-visualizations-for-divisive-clustering" id="toc-best-visualizations-for-divisive-clustering">Best Visualizations
+for Divisive Clustering</a></li>
+<li><a href="#correlation-heatmap-recommended" id="toc-correlation-heatmap-recommended">Correlation Heatmap
+(Recommended)</a></li>
+<li><a href="#cluster-quality-metrics" id="toc-cluster-quality-metrics">Cluster Quality Metrics</a></li>
+<li><a href="#network-graph-if-igraph-available" id="toc-network-graph-if-igraph-available">Network Graph (if igraph
+available)</a></li>
+<li><a href="#note-on-correlation-circle" id="toc-note-on-correlation-circle">Note on Correlation Circle</a></li>
+</ul></li>
+<li><a href="#prediction-on-new-variables" id="toc-prediction-on-new-variables">Prediction on New
+Variables</a></li>
+<li><a href="#selecting-the-number-of-clusters" id="toc-selecting-the-number-of-clusters">Selecting the Number of
+Clusters</a>
+<ul>
+<li><a href="#elbow-method" id="toc-elbow-method">Elbow Method</a></li>
+<li><a href="#complete-comparison" id="toc-complete-comparison">Complete
+Comparison</a></li>
+</ul></li>
+<li><a href="#mixed-data" id="toc-mixed-data">Mixed Data</a></li>
+<li><a href="#comparison-with-kmeansclusterer" id="toc-comparison-with-kmeansclusterer">Comparison with
+KMeansClusterer</a>
+<ul>
+<li><a href="#side-by-side-visualization" id="toc-side-by-side-visualization">Side-by-Side Visualization</a></li>
+</ul></li>
+<li><a href="#recommended-use-cases" id="toc-recommended-use-cases">Recommended Use Cases</a>
+<ul>
+<li><a href="#when-to-use-divisiveclusterer" id="toc-when-to-use-divisiveclusterer">When to Use
+DivisiveClusterer?</a></li>
+<li><a href="#when-to-prefer-kmeansclusterer" id="toc-when-to-prefer-kmeansclusterer">When to Prefer
+KMeansClusterer?</a></li>
+</ul></li>
+<li><a href="#export-and-integration" id="toc-export-and-integration">Export and Integration</a>
+<ul>
+<li><a href="#retrieving-assignments" id="toc-retrieving-assignments">Retrieving Assignments</a></li>
+<li><a href="#retrieving-the-hierarchical-structure" id="toc-retrieving-the-hierarchical-structure">Retrieving the
+Hierarchical Structure</a></li>
+<li><a href="#cluster-centers" id="toc-cluster-centers">Cluster
+Centers</a></li>
+</ul></li>
+<li><a href="#advanced-parameters---summary" id="toc-advanced-parameters---summary">Advanced Parameters -
+Summary</a></li>
+<li><a href="#conclusion" id="toc-conclusion">Conclusion</a></li>
+<li><a href="#references" id="toc-references">References</a></li>
+</ul>
+</div>
+
+<div id="introduction" class="section level2">
+<h2>Introduction</h2>
+<p>The <code>DivisiveClusterer</code> implements a <strong>divisive
+(top-down) hierarchical clustering</strong> algorithm for variables,
+inspired by VARCLUS (SAS). Unlike the <code>KMeansClusterer</code> which
+starts with K clusters and optimizes them, this algorithm:</p>
+<ol style="list-style-type: decimal">
+<li>Starts with all variables in a single cluster</li>
+<li>Iteratively splits the most heterogeneous cluster</li>
+<li>Stops when the desired number of clusters is reached (or based on a
+stopping criterion)</li>
+</ol>
+<div id="advantages-of-divisive-clustering" class="section level3">
+<h3>Advantages of Divisive Clustering</h3>
+<ul>
+<li><strong>Deterministic</strong>: No random initialization, 100%
+reproducible results</li>
+<li><strong>Interpretable hierarchy</strong>: Complete history of
+splits</li>
+<li><strong>Automatic stopping criteria</strong>: Kaiser rule,
+eigenvalue ratio</li>
+<li><strong>Hybrid</strong>: Fast path for numeric data, PCAmix for
+mixed data</li>
+</ul>
+</div>
+<div id="algorithm-principle" class="section level3">
+<h3>Algorithm Principle</h3>
+<p>At each iteration:</p>
+<ol style="list-style-type: decimal">
+<li><strong>Selection</strong>: Identify the cluster with the largest
+2nd eigenvalue (λ₂)</li>
+<li><strong>Verification</strong>: Check stopping criteria (Kaiser,
+ratio)</li>
+<li><strong>Division</strong>: PCA on the cluster, Varimax rotation,
+assignment based on squared loadings</li>
+<li><strong>Update</strong>: Record the split history</li>
+</ol>
+</div>
+</div>
+<div id="installation-and-loading" class="section level2">
+<h2>Installation and Loading</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" tabindex="-1"></a><span class="fu">library</span>(M2RClust)</span></code></pre></div>
+</div>
+<div id="example-data" class="section level2">
+<h2>Example Data</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">data</span>(mtcars)</span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="co"># Larger data to better illustrate the hierarchy</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a>n <span class="ot">&lt;-</span> <span class="dv">100</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>p <span class="ot">&lt;-</span> <span class="dv">12</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="co"># Create data with known cluster structure</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>data_struct <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb2-10"><a href="#cb2-10" tabindex="-1"></a>  <span class="co"># Group 1: Correlated variables (performance)</span></span>
+<span id="cb2-11"><a href="#cb2-11" tabindex="-1"></a>  <span class="at">V1 =</span> <span class="fu">rnorm</span>(n),</span>
+<span id="cb2-12"><a href="#cb2-12" tabindex="-1"></a>  <span class="at">V2 =</span> <span class="cn">NA</span>, <span class="at">V3 =</span> <span class="cn">NA</span>,</span>
+<span id="cb2-13"><a href="#cb2-13" tabindex="-1"></a>  <span class="co"># Group 2: Correlated variables (dimensions)</span></span>
+<span id="cb2-14"><a href="#cb2-14" tabindex="-1"></a>  <span class="at">V4 =</span> <span class="fu">rnorm</span>(n),</span>
+<span id="cb2-15"><a href="#cb2-15" tabindex="-1"></a>  <span class="at">V5 =</span> <span class="cn">NA</span>, <span class="at">V6 =</span> <span class="cn">NA</span>,</span>
+<span id="cb2-16"><a href="#cb2-16" tabindex="-1"></a>  <span class="co"># Group 3: Correlated variables (economy)</span></span>
+<span id="cb2-17"><a href="#cb2-17" tabindex="-1"></a>  <span class="at">V7 =</span> <span class="fu">rnorm</span>(n),</span>
+<span id="cb2-18"><a href="#cb2-18" tabindex="-1"></a>  <span class="at">V8 =</span> <span class="cn">NA</span>, <span class="at">V9 =</span> <span class="cn">NA</span>,</span>
+<span id="cb2-19"><a href="#cb2-19" tabindex="-1"></a>  <span class="co"># Group 4: Independent variables</span></span>
+<span id="cb2-20"><a href="#cb2-20" tabindex="-1"></a>  <span class="at">V10 =</span> <span class="fu">rnorm</span>(n),</span>
+<span id="cb2-21"><a href="#cb2-21" tabindex="-1"></a>  <span class="at">V11 =</span> <span class="fu">rnorm</span>(n),</span>
+<span id="cb2-22"><a href="#cb2-22" tabindex="-1"></a>  <span class="at">V12 =</span> <span class="fu">rnorm</span>(n)</span>
+<span id="cb2-23"><a href="#cb2-23" tabindex="-1"></a>)</span>
+<span id="cb2-24"><a href="#cb2-24" tabindex="-1"></a></span>
+<span id="cb2-25"><a href="#cb2-25" tabindex="-1"></a><span class="co"># Add within-group correlations</span></span>
+<span id="cb2-26"><a href="#cb2-26" tabindex="-1"></a>data_struct<span class="sc">$</span>V2 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V1 <span class="sc">*</span> <span class="fl">0.9</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.3</span>)</span>
+<span id="cb2-27"><a href="#cb2-27" tabindex="-1"></a>data_struct<span class="sc">$</span>V3 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V1 <span class="sc">*</span> <span class="fl">0.85</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.4</span>)</span>
+<span id="cb2-28"><a href="#cb2-28" tabindex="-1"></a>data_struct<span class="sc">$</span>V5 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V4 <span class="sc">*</span> <span class="fl">0.88</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.35</span>)</span>
+<span id="cb2-29"><a href="#cb2-29" tabindex="-1"></a>data_struct<span class="sc">$</span>V6 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V4 <span class="sc">*</span> <span class="fl">0.82</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.45</span>)</span>
+<span id="cb2-30"><a href="#cb2-30" tabindex="-1"></a>data_struct<span class="sc">$</span>V8 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V7 <span class="sc">*</span> <span class="fl">0.87</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.38</span>)</span>
+<span id="cb2-31"><a href="#cb2-31" tabindex="-1"></a>data_struct<span class="sc">$</span>V9 <span class="ot">&lt;-</span> data_struct<span class="sc">$</span>V7 <span class="sc">*</span> <span class="fl">0.80</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.5</span>)</span>
+<span id="cb2-32"><a href="#cb2-32" tabindex="-1"></a></span>
+<span id="cb2-33"><a href="#cb2-33" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Data dimensions:&quot;</span>, <span class="fu">dim</span>(data_struct), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb2-34"><a href="#cb2-34" tabindex="-1"></a><span class="co">#&gt; Data dimensions: 100 12</span></span></code></pre></div>
+</div>
+<div id="basic-usage" class="section level2">
+<h2>Basic Usage</h2>
+<div id="creating-and-fitting" class="section level3">
+<h3>Creating and Fitting</h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co"># Create the divisive clusterer</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a>clusterer <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb3-5"><a href="#cb3-5" tabindex="-1"></a>  <span class="at">standardize =</span> <span class="cn">TRUE</span></span>
+<span id="cb3-6"><a href="#cb3-6" tabindex="-1"></a>)</span>
+<span id="cb3-7"><a href="#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" tabindex="-1"></a><span class="co"># Fit</span></span>
+<span id="cb3-9"><a href="#cb3-9" tabindex="-1"></a>clusterer<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb3-10"><a href="#cb3-10" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb3-11"><a href="#cb3-11" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb3-12"><a href="#cb3-12" tabindex="-1"></a></span>
+<span id="cb3-13"><a href="#cb3-13" tabindex="-1"></a><span class="co"># Display</span></span>
+<span id="cb3-14"><a href="#cb3-14" tabindex="-1"></a>clusterer<span class="sc">$</span><span class="fu">print</span>()</span>
+<span id="cb3-15"><a href="#cb3-15" tabindex="-1"></a><span class="co">#&gt; === Divisive Clusterer (VARCLUS-style) ===</span></span>
+<span id="cb3-16"><a href="#cb3-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-17"><a href="#cb3-17" tabindex="-1"></a><span class="co">#&gt; Number of variables: 12</span></span>
+<span id="cb3-18"><a href="#cb3-18" tabindex="-1"></a><span class="co">#&gt; Number of clusters: 4</span></span>
+<span id="cb3-19"><a href="#cb3-19" tabindex="-1"></a><span class="co">#&gt; Standardization: Yes</span></span>
+<span id="cb3-20"><a href="#cb3-20" tabindex="-1"></a><span class="co">#&gt; Fitted: Yes</span></span>
+<span id="cb3-21"><a href="#cb3-21" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-22"><a href="#cb3-22" tabindex="-1"></a><span class="co">#&gt; Cluster sizes:</span></span>
+<span id="cb3-23"><a href="#cb3-23" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-24"><a href="#cb3-24" tabindex="-1"></a><span class="co">#&gt; 1 2 3 4 </span></span>
+<span id="cb3-25"><a href="#cb3-25" tabindex="-1"></a><span class="co">#&gt; 4 3 3 2 </span></span>
+<span id="cb3-26"><a href="#cb3-26" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-27"><a href="#cb3-27" tabindex="-1"></a><span class="co">#&gt; Split history:</span></span>
+<span id="cb3-28"><a href="#cb3-28" tabindex="-1"></a><span class="co">#&gt;   Iteration 1: Split cluster 1 (lambda1=3.187, lambda2=2.728, ratio=0.856) -&gt; 2 clusters</span></span>
+<span id="cb3-29"><a href="#cb3-29" tabindex="-1"></a><span class="co">#&gt;   Iteration 2: Split cluster 1 (lambda1=3.155, lambda2=2.380, ratio=0.754) -&gt; 3 clusters</span></span>
+<span id="cb3-30"><a href="#cb3-30" tabindex="-1"></a><span class="co">#&gt;   Iteration 3: Split cluster 2 (lambda1=2.726, lambda2=1.106, ratio=0.406) -&gt; 4 clusters</span></span>
+<span id="cb3-31"><a href="#cb3-31" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb3-32"><a href="#cb3-32" tabindex="-1"></a><span class="co">#&gt; Global homogeneity: 0.776</span></span></code></pre></div>
+</div>
+<div id="detailed-summary" class="section level3">
+<h3>Detailed Summary</h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a>clusterer<span class="sc">$</span><span class="fu">summary</span>()</span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; === Divisive Clusterer Summary ===</span></span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a><span class="co">#&gt; Cluster 1 (4 variables):</span></span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a><span class="co">#&gt;   Variables: V1, V2, V3, V11 </span></span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a><span class="co">#&gt;   1st eigenvalue: 2.857</span></span>
+<span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a><span class="co">#&gt;   2nd eigenvalue: 0.937</span></span>
+<span id="cb4-9"><a href="#cb4-9" tabindex="-1"></a><span class="co">#&gt;   Eigenvalue ratio (lambda2/lambda1): 0.328</span></span>
+<span id="cb4-10"><a href="#cb4-10" tabindex="-1"></a><span class="co">#&gt;   Homogeneity: 0.714</span></span>
+<span id="cb4-11"><a href="#cb4-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-12"><a href="#cb4-12" tabindex="-1"></a><span class="co">#&gt; Cluster 2 (3 variables):</span></span>
+<span id="cb4-13"><a href="#cb4-13" tabindex="-1"></a><span class="co">#&gt;   Variables: V4, V5, V6 </span></span>
+<span id="cb4-14"><a href="#cb4-14" tabindex="-1"></a><span class="co">#&gt;   1st eigenvalue: 2.698</span></span>
+<span id="cb4-15"><a href="#cb4-15" tabindex="-1"></a><span class="co">#&gt;   2nd eigenvalue: 0.232</span></span>
+<span id="cb4-16"><a href="#cb4-16" tabindex="-1"></a><span class="co">#&gt;   Eigenvalue ratio (lambda2/lambda1): 0.086</span></span>
+<span id="cb4-17"><a href="#cb4-17" tabindex="-1"></a><span class="co">#&gt;   Homogeneity: 0.899</span></span>
+<span id="cb4-18"><a href="#cb4-18" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-19"><a href="#cb4-19" tabindex="-1"></a><span class="co">#&gt; Cluster 3 (3 variables):</span></span>
+<span id="cb4-20"><a href="#cb4-20" tabindex="-1"></a><span class="co">#&gt;   Variables: V7, V8, V9 </span></span>
+<span id="cb4-21"><a href="#cb4-21" tabindex="-1"></a><span class="co">#&gt;   1st eigenvalue: 2.671</span></span>
+<span id="cb4-22"><a href="#cb4-22" tabindex="-1"></a><span class="co">#&gt;   2nd eigenvalue: 0.239</span></span>
+<span id="cb4-23"><a href="#cb4-23" tabindex="-1"></a><span class="co">#&gt;   Eigenvalue ratio (lambda2/lambda1): 0.089</span></span>
+<span id="cb4-24"><a href="#cb4-24" tabindex="-1"></a><span class="co">#&gt;   Homogeneity: 0.890</span></span>
+<span id="cb4-25"><a href="#cb4-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb4-26"><a href="#cb4-26" tabindex="-1"></a><span class="co">#&gt; Cluster 4 (2 variables):</span></span>
+<span id="cb4-27"><a href="#cb4-27" tabindex="-1"></a><span class="co">#&gt;   Variables: V10, V12 </span></span>
+<span id="cb4-28"><a href="#cb4-28" tabindex="-1"></a><span class="co">#&gt;   1st eigenvalue: 1.090</span></span>
+<span id="cb4-29"><a href="#cb4-29" tabindex="-1"></a><span class="co">#&gt;   2nd eigenvalue: 0.910</span></span>
+<span id="cb4-30"><a href="#cb4-30" tabindex="-1"></a><span class="co">#&gt;   Eigenvalue ratio (lambda2/lambda1): 0.835</span></span>
+<span id="cb4-31"><a href="#cb4-31" tabindex="-1"></a><span class="co">#&gt;   Homogeneity: 0.545</span></span></code></pre></div>
+</div>
+</div>
+<div id="split-history" class="section level2">
+<h2>Split History</h2>
+<p>One of the major advantages of <code>DivisiveClusterer</code> is
+access to the complete split history.</p>
+<div id="consulting-the-history" class="section level3">
+<h3>Consulting the History</h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a>history <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">get_split_history</span>()</span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a></span>
+<span id="cb5-3"><a href="#cb5-3" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;=== Split History ===</span><span class="sc">\n\n</span><span class="st">&quot;</span>)</span>
+<span id="cb5-4"><a href="#cb5-4" tabindex="-1"></a><span class="co">#&gt; === Split History ===</span></span>
+<span id="cb5-5"><a href="#cb5-5" tabindex="-1"></a><span class="cf">for</span> (h <span class="cf">in</span> history) {</span>
+<span id="cb5-6"><a href="#cb5-6" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;Iteration %d:</span><span class="sc">\n</span><span class="st">&quot;</span>, h<span class="sc">$</span>iteration))</span>
+<span id="cb5-7"><a href="#cb5-7" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  Split cluster: %d</span><span class="sc">\n</span><span class="st">&quot;</span>, h<span class="sc">$</span>split_cluster))</span>
+<span id="cb5-8"><a href="#cb5-8" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  λ₁ = %.3f, λ₂ = %.3f</span><span class="sc">\n</span><span class="st">&quot;</span>, h<span class="sc">$</span>eigenvalue_1, h<span class="sc">$</span>eigenvalue_2))</span>
+<span id="cb5-9"><a href="#cb5-9" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  Ratio λ₂/λ₁ = %.3f</span><span class="sc">\n</span><span class="st">&quot;</span>, h<span class="sc">$</span>eigenvalue_ratio))</span>
+<span id="cb5-10"><a href="#cb5-10" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  Split quality: %.3f</span><span class="sc">\n</span><span class="st">&quot;</span>, h<span class="sc">$</span>split_quality))</span>
+<span id="cb5-11"><a href="#cb5-11" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  Group 1: %s</span><span class="sc">\n</span><span class="st">&quot;</span>, <span class="fu">paste</span>(h<span class="sc">$</span>variables_group1, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)))</span>
+<span id="cb5-12"><a href="#cb5-12" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;  Group 2: %s</span><span class="sc">\n</span><span class="st">&quot;</span>, <span class="fu">paste</span>(h<span class="sc">$</span>variables_group2, <span class="at">collapse =</span> <span class="st">&quot;, &quot;</span>)))</span>
+<span id="cb5-13"><a href="#cb5-13" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb5-14"><a href="#cb5-14" tabindex="-1"></a>}</span>
+<span id="cb5-15"><a href="#cb5-15" tabindex="-1"></a><span class="co">#&gt; Iteration 1:</span></span>
+<span id="cb5-16"><a href="#cb5-16" tabindex="-1"></a><span class="co">#&gt;   Split cluster: 1</span></span>
+<span id="cb5-17"><a href="#cb5-17" tabindex="-1"></a><span class="co">#&gt;   λ₁ = 3.187, λ₂ = 2.728</span></span>
+<span id="cb5-18"><a href="#cb5-18" tabindex="-1"></a><span class="co">#&gt;   Ratio λ₂/λ₁ = 0.856</span></span>
+<span id="cb5-19"><a href="#cb5-19" tabindex="-1"></a><span class="co">#&gt;   Split quality: 0.750</span></span>
+<span id="cb5-20"><a href="#cb5-20" tabindex="-1"></a><span class="co">#&gt;   Group 1: V1, V2, V3, V7, V8, V9, V11</span></span>
+<span id="cb5-21"><a href="#cb5-21" tabindex="-1"></a><span class="co">#&gt;   Group 2: V4, V5, V6, V10, V12</span></span>
+<span id="cb5-22"><a href="#cb5-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-23"><a href="#cb5-23" tabindex="-1"></a><span class="co">#&gt; Iteration 2:</span></span>
+<span id="cb5-24"><a href="#cb5-24" tabindex="-1"></a><span class="co">#&gt;   Split cluster: 1</span></span>
+<span id="cb5-25"><a href="#cb5-25" tabindex="-1"></a><span class="co">#&gt;   λ₁ = 3.155, λ₂ = 2.380</span></span>
+<span id="cb5-26"><a href="#cb5-26" tabindex="-1"></a><span class="co">#&gt;   Ratio λ₂/λ₁ = 0.754</span></span>
+<span id="cb5-27"><a href="#cb5-27" tabindex="-1"></a><span class="co">#&gt;   Split quality: 0.724</span></span>
+<span id="cb5-28"><a href="#cb5-28" tabindex="-1"></a><span class="co">#&gt;   Group 1: V1, V2, V3, V11</span></span>
+<span id="cb5-29"><a href="#cb5-29" tabindex="-1"></a><span class="co">#&gt;   Group 2: V7, V8, V9</span></span>
+<span id="cb5-30"><a href="#cb5-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb5-31"><a href="#cb5-31" tabindex="-1"></a><span class="co">#&gt; Iteration 3:</span></span>
+<span id="cb5-32"><a href="#cb5-32" tabindex="-1"></a><span class="co">#&gt;   Split cluster: 2</span></span>
+<span id="cb5-33"><a href="#cb5-33" tabindex="-1"></a><span class="co">#&gt;   λ₁ = 2.726, λ₂ = 1.106</span></span>
+<span id="cb5-34"><a href="#cb5-34" tabindex="-1"></a><span class="co">#&gt;   Ratio λ₂/λ₁ = 0.406</span></span>
+<span id="cb5-35"><a href="#cb5-35" tabindex="-1"></a><span class="co">#&gt;   Split quality: 0.745</span></span>
+<span id="cb5-36"><a href="#cb5-36" tabindex="-1"></a><span class="co">#&gt;   Group 1: V4, V5, V6</span></span>
+<span id="cb5-37"><a href="#cb5-37" tabindex="-1"></a><span class="co">#&gt;   Group 2: V10, V12</span></span></code></pre></div>
+</div>
+<div id="summary-table" class="section level3">
+<h3>Summary Table</h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a>details <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">get_split_details</span>()</span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="fu">print</span>(details)</span>
+<span id="cb6-3"><a href="#cb6-3" tabindex="-1"></a><span class="co">#&gt;   iteration split_cluster eigenvalue_1 eigenvalue_2 eigenvalue_ratio</span></span>
+<span id="cb6-4"><a href="#cb6-4" tabindex="-1"></a><span class="co">#&gt; 1         1             1     3.186609     2.727841        0.8560324</span></span>
+<span id="cb6-5"><a href="#cb6-5" tabindex="-1"></a><span class="co">#&gt; 2         2             1     3.155130     2.379823        0.7542710</span></span>
+<span id="cb6-6"><a href="#cb6-6" tabindex="-1"></a><span class="co">#&gt; 3         3             2     2.725832     1.105514        0.4055694</span></span>
+<span id="cb6-7"><a href="#cb6-7" tabindex="-1"></a><span class="co">#&gt;   n_clusters_after n_vars_group1 n_vars_group2 split_quality</span></span>
+<span id="cb6-8"><a href="#cb6-8" tabindex="-1"></a><span class="co">#&gt; 1                2             7             5     0.7503140</span></span>
+<span id="cb6-9"><a href="#cb6-9" tabindex="-1"></a><span class="co">#&gt; 2                3             4             3     0.7243182</span></span>
+<span id="cb6-10"><a href="#cb6-10" tabindex="-1"></a><span class="co">#&gt; 3                4             3             2     0.7445645</span></span></code></pre></div>
+</div>
+</div>
+<div id="dendrogram-visualization" class="section level2">
+<h2>Dendrogram Visualization</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a>clusterer<span class="sc">$</span><span class="fu">plot_split_dendrogram</span>(</span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a>  <span class="at">main =</span> <span class="st">&quot;Divisive Clustering Tree&quot;</span>,</span>
+<span id="cb7-3"><a href="#cb7-3" tabindex="-1"></a>  <span class="at">show_eigenvalues =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb7-4"><a href="#cb7-4" tabindex="-1"></a>  <span class="at">show_vars =</span> <span class="cn">TRUE</span></span>
+<span id="cb7-5"><a href="#cb7-5" tabindex="-1"></a>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Split tree (top-down dendrogram)" src="data:image/png;base64,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" alt="Split tree (top-down dendrogram)" />
+<div class="figcaption">Split tree (top-down dendrogram)</div>
+</div>
+</div>
+<div id="stopping-criteria" class="section level2">
+<h2>Stopping Criteria</h2>
+<div id="kaiser-criterion" class="section level3">
+<h3>Kaiser Criterion</h3>
+<p>The Kaiser criterion stops splitting when λ₂ &lt; 1 (no significant
+secondary component).</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a>clusterer_kaiser <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb8-3"><a href="#cb8-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">10</span>,  <span class="co"># Theoretical maximum</span></span>
+<span id="cb8-4"><a href="#cb8-4" tabindex="-1"></a>  <span class="at">stop_at_kaiser =</span> <span class="cn">TRUE</span></span>
+<span id="cb8-5"><a href="#cb8-5" tabindex="-1"></a>)</span>
+<span id="cb8-6"><a href="#cb8-6" tabindex="-1"></a>clusterer_kaiser<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb8-7"><a href="#cb8-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb8-8"><a href="#cb8-8" tabindex="-1"></a><span class="co">#&gt; Kaiser criterion: Stopping at 4 clusters (max lambda2 = 0.937 &lt; 1.0)</span></span>
+<span id="cb8-9"><a href="#cb8-9" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 4 iterations</span></span>
+<span id="cb8-10"><a href="#cb8-10" tabindex="-1"></a></span>
+<span id="cb8-11"><a href="#cb8-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Clusters formed with Kaiser:&quot;</span>, <span class="fu">max</span>(clusterer_kaiser<span class="sc">$</span>clusters), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb8-12"><a href="#cb8-12" tabindex="-1"></a><span class="co">#&gt; Clusters formed with Kaiser: 4</span></span>
+<span id="cb8-13"><a href="#cb8-13" tabindex="-1"></a>clusterer_kaiser<span class="sc">$</span><span class="fu">print</span>()</span>
+<span id="cb8-14"><a href="#cb8-14" tabindex="-1"></a><span class="co">#&gt; === Divisive Clusterer (VARCLUS-style) ===</span></span>
+<span id="cb8-15"><a href="#cb8-15" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-16"><a href="#cb8-16" tabindex="-1"></a><span class="co">#&gt; Number of variables: 12</span></span>
+<span id="cb8-17"><a href="#cb8-17" tabindex="-1"></a><span class="co">#&gt; Number of clusters: 10</span></span>
+<span id="cb8-18"><a href="#cb8-18" tabindex="-1"></a><span class="co">#&gt; Standardization: Yes</span></span>
+<span id="cb8-19"><a href="#cb8-19" tabindex="-1"></a><span class="co">#&gt; Fitted: Yes</span></span>
+<span id="cb8-20"><a href="#cb8-20" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-21"><a href="#cb8-21" tabindex="-1"></a><span class="co">#&gt; Cluster sizes:</span></span>
+<span id="cb8-22"><a href="#cb8-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-23"><a href="#cb8-23" tabindex="-1"></a><span class="co">#&gt; 1 2 3 4 </span></span>
+<span id="cb8-24"><a href="#cb8-24" tabindex="-1"></a><span class="co">#&gt; 4 3 3 2 </span></span>
+<span id="cb8-25"><a href="#cb8-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-26"><a href="#cb8-26" tabindex="-1"></a><span class="co">#&gt; Split history:</span></span>
+<span id="cb8-27"><a href="#cb8-27" tabindex="-1"></a><span class="co">#&gt;   Iteration 1: Split cluster 1 (lambda1=3.187, lambda2=2.728, ratio=0.856) -&gt; 2 clusters</span></span>
+<span id="cb8-28"><a href="#cb8-28" tabindex="-1"></a><span class="co">#&gt;   Iteration 2: Split cluster 1 (lambda1=3.155, lambda2=2.380, ratio=0.754) -&gt; 3 clusters</span></span>
+<span id="cb8-29"><a href="#cb8-29" tabindex="-1"></a><span class="co">#&gt;   Iteration 3: Split cluster 2 (lambda1=2.726, lambda2=1.106, ratio=0.406) -&gt; 4 clusters</span></span>
+<span id="cb8-30"><a href="#cb8-30" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb8-31"><a href="#cb8-31" tabindex="-1"></a><span class="co">#&gt; Global homogeneity: 0.776</span></span></code></pre></div>
+</div>
+<div id="eigenvalue-ratio" class="section level3">
+<h3>Eigenvalue Ratio</h3>
+<p>Stops when λ₂/λ₁ falls below a threshold (cluster already
+homogeneous).</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a>clusterer_ratio <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb9-3"><a href="#cb9-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">10</span>,</span>
+<span id="cb9-4"><a href="#cb9-4" tabindex="-1"></a>  <span class="at">min_eigenvalue_ratio =</span> <span class="fl">0.2</span>  <span class="co"># Stop if λ₂/λ₁ &lt; 0.2</span></span>
+<span id="cb9-5"><a href="#cb9-5" tabindex="-1"></a>)</span>
+<span id="cb9-6"><a href="#cb9-6" tabindex="-1"></a>clusterer_ratio<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb9-7"><a href="#cb9-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb9-8"><a href="#cb9-8" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.200)</span></span>
+<span id="cb9-9"><a href="#cb9-9" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb9-10"><a href="#cb9-10" tabindex="-1"></a></span>
+<span id="cb9-11"><a href="#cb9-11" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Clusters formed with ratio 0.2:&quot;</span>, <span class="fu">max</span>(clusterer_ratio<span class="sc">$</span>clusters), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb9-12"><a href="#cb9-12" tabindex="-1"></a><span class="co">#&gt; Clusters formed with ratio 0.2: 5</span></span></code></pre></div>
+</div>
+<div id="minimum-cluster-size" class="section level3">
+<h3>Minimum Cluster Size</h3>
+<p>Prevents splitting clusters that are too small.</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a>clusterer_minsize <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb10-3"><a href="#cb10-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">6</span>,</span>
+<span id="cb10-4"><a href="#cb10-4" tabindex="-1"></a>  <span class="at">min_cluster_size =</span> <span class="dv">3</span>  <span class="co"># At least 3 variables to split</span></span>
+<span id="cb10-5"><a href="#cb10-5" tabindex="-1"></a>)</span>
+<span id="cb10-6"><a href="#cb10-6" tabindex="-1"></a>clusterer_minsize<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb10-7"><a href="#cb10-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb10-8"><a href="#cb10-8" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb10-9"><a href="#cb10-9" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb10-10"><a href="#cb10-10" tabindex="-1"></a>clusterer_minsize<span class="sc">$</span><span class="fu">print</span>()</span>
+<span id="cb10-11"><a href="#cb10-11" tabindex="-1"></a><span class="co">#&gt; === Divisive Clusterer (VARCLUS-style) ===</span></span>
+<span id="cb10-12"><a href="#cb10-12" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-13"><a href="#cb10-13" tabindex="-1"></a><span class="co">#&gt; Number of variables: 12</span></span>
+<span id="cb10-14"><a href="#cb10-14" tabindex="-1"></a><span class="co">#&gt; Number of clusters: 6</span></span>
+<span id="cb10-15"><a href="#cb10-15" tabindex="-1"></a><span class="co">#&gt; Standardization: Yes</span></span>
+<span id="cb10-16"><a href="#cb10-16" tabindex="-1"></a><span class="co">#&gt; Fitted: Yes</span></span>
+<span id="cb10-17"><a href="#cb10-17" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-18"><a href="#cb10-18" tabindex="-1"></a><span class="co">#&gt; Cluster sizes:</span></span>
+<span id="cb10-19"><a href="#cb10-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-20"><a href="#cb10-20" tabindex="-1"></a><span class="co">#&gt; 1 2 3 4 5 </span></span>
+<span id="cb10-21"><a href="#cb10-21" tabindex="-1"></a><span class="co">#&gt; 3 3 3 2 1 </span></span>
+<span id="cb10-22"><a href="#cb10-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-23"><a href="#cb10-23" tabindex="-1"></a><span class="co">#&gt; Split history:</span></span>
+<span id="cb10-24"><a href="#cb10-24" tabindex="-1"></a><span class="co">#&gt;   Iteration 1: Split cluster 1 (lambda1=3.187, lambda2=2.728, ratio=0.856) -&gt; 2 clusters</span></span>
+<span id="cb10-25"><a href="#cb10-25" tabindex="-1"></a><span class="co">#&gt;   Iteration 2: Split cluster 1 (lambda1=3.155, lambda2=2.380, ratio=0.754) -&gt; 3 clusters</span></span>
+<span id="cb10-26"><a href="#cb10-26" tabindex="-1"></a><span class="co">#&gt;   Iteration 3: Split cluster 2 (lambda1=2.726, lambda2=1.106, ratio=0.406) -&gt; 4 clusters</span></span>
+<span id="cb10-27"><a href="#cb10-27" tabindex="-1"></a><span class="co">#&gt;   Iteration 4: Split cluster 1 (lambda1=2.857, lambda2=0.937, ratio=0.328) -&gt; 5 clusters</span></span>
+<span id="cb10-28"><a href="#cb10-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb10-29"><a href="#cb10-29" tabindex="-1"></a><span class="co">#&gt; Global homogeneity: 0.854</span></span></code></pre></div>
+</div>
+</div>
+<div id="rotation-methods" class="section level2">
+<h2>Rotation Methods</h2>
+<div id="varimax-default" class="section level3">
+<h3>Varimax (default)</h3>
+<p>Orthogonal rotation that maximizes the variance of squared
+loadings.</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a>clust_varimax <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb11-3"><a href="#cb11-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb11-4"><a href="#cb11-4" tabindex="-1"></a>  <span class="at">rotation_method =</span> <span class="st">&quot;varimax&quot;</span></span>
+<span id="cb11-5"><a href="#cb11-5" tabindex="-1"></a>)</span>
+<span id="cb11-6"><a href="#cb11-6" tabindex="-1"></a>clust_varimax<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb11-7"><a href="#cb11-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb11-8"><a href="#cb11-8" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb11-9"><a href="#cb11-9" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Homogeneity (Varimax):&quot;</span>, <span class="fu">round</span>(clust_varimax<span class="sc">$</span><span class="fu">get_homogeneity</span>(), <span class="dv">4</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb11-10"><a href="#cb11-10" tabindex="-1"></a><span class="co">#&gt; Homogeneity (Varimax): 0.7763</span></span></code></pre></div>
+</div>
+<div id="promax" class="section level3">
+<h3>Promax</h3>
+<p>Oblique rotation, allows correlated factors.</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a>clust_promax <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb12-3"><a href="#cb12-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb12-4"><a href="#cb12-4" tabindex="-1"></a>  <span class="at">rotation_method =</span> <span class="st">&quot;promax&quot;</span>,</span>
+<span id="cb12-5"><a href="#cb12-5" tabindex="-1"></a>  <span class="at">promax_m =</span> <span class="dv">4</span>  <span class="co"># Power parameter</span></span>
+<span id="cb12-6"><a href="#cb12-6" tabindex="-1"></a>)</span>
+<span id="cb12-7"><a href="#cb12-7" tabindex="-1"></a>clust_promax<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb12-8"><a href="#cb12-8" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb12-9"><a href="#cb12-9" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb12-10"><a href="#cb12-10" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Homogeneity (Promax):&quot;</span>, <span class="fu">round</span>(clust_promax<span class="sc">$</span><span class="fu">get_homogeneity</span>(), <span class="dv">4</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb12-11"><a href="#cb12-11" tabindex="-1"></a><span class="co">#&gt; Homogeneity (Promax): 0.7763</span></span></code></pre></div>
+</div>
+<div id="no-rotation" class="section level3">
+<h3>No Rotation</h3>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a>clust_none <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb13-3"><a href="#cb13-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb13-4"><a href="#cb13-4" tabindex="-1"></a>  <span class="at">rotation_method =</span> <span class="st">&quot;none&quot;</span></span>
+<span id="cb13-5"><a href="#cb13-5" tabindex="-1"></a>)</span>
+<span id="cb13-6"><a href="#cb13-6" tabindex="-1"></a>clust_none<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb13-7"><a href="#cb13-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb13-8"><a href="#cb13-8" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb13-9"><a href="#cb13-9" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Homogeneity (No rotation):&quot;</span>, <span class="fu">round</span>(clust_none<span class="sc">$</span><span class="fu">get_homogeneity</span>(), <span class="dv">4</span>), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" tabindex="-1"></a><span class="co">#&gt; Homogeneity (No rotation): 0.7829</span></span></code></pre></div>
+</div>
+</div>
+<div id="cluster-selection-criterion" class="section level2">
+<h2>Cluster Selection Criterion</h2>
+<div id="by-λ₂-default" class="section level3">
+<h3>By λ₂ (default)</h3>
+<p>Splits the cluster with the largest 2nd eigenvalue.</p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a>clust_ev2 <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb14-3"><a href="#cb14-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb14-4"><a href="#cb14-4" tabindex="-1"></a>  <span class="at">split_criterion =</span> <span class="st">&quot;eigenvalue2&quot;</span></span>
+<span id="cb14-5"><a href="#cb14-5" tabindex="-1"></a>)</span>
+<span id="cb14-6"><a href="#cb14-6" tabindex="-1"></a>clust_ev2<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb14-7"><a href="#cb14-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb14-8"><a href="#cb14-8" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span></code></pre></div>
+</div>
+<div id="by-homogeneity" class="section level3">
+<h3>By Homogeneity</h3>
+<p>Splits the least homogeneous cluster (1 - λ₁/(λ₁+λ₂)).</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a>clust_homog <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a>  <span class="at">data =</span> data_struct,</span>
+<span id="cb15-3"><a href="#cb15-3" tabindex="-1"></a>  <span class="at">n_clusters =</span> <span class="dv">4</span>,</span>
+<span id="cb15-4"><a href="#cb15-4" tabindex="-1"></a>  <span class="at">split_criterion =</span> <span class="st">&quot;homogeneity&quot;</span></span>
+<span id="cb15-5"><a href="#cb15-5" tabindex="-1"></a>)</span>
+<span id="cb15-6"><a href="#cb15-6" tabindex="-1"></a>clust_homog<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb15-7"><a href="#cb15-7" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb15-8"><a href="#cb15-8" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span></code></pre></div>
+</div>
+</div>
+<div id="visualizations" class="section level2">
+<h2>Visualizations</h2>
+<p>The <code>DivisiveClusterer</code> has specific visualizations that
+are well-suited to its hierarchical nature:</p>
+<div id="best-visualizations-for-divisive-clustering" class="section level3">
+<h3>Best Visualizations for Divisive Clustering</h3>
+<table style="width:100%;">
+<colgroup>
+<col width="46%" />
+<col width="36%" />
+<col width="16%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Visualization</th>
+<th>Relevance</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>Dendrogram</strong></td>
+<td>⭐⭐⭐</td>
+<td>Shows the split history - signature plot</td>
+</tr>
+<tr class="even">
+<td><strong>Correlation Heatmap</strong></td>
+<td>⭐⭐⭐</td>
+<td>Reveals block structure by cluster</td>
+</tr>
+<tr class="odd">
+<td><strong>Cluster Quality</strong></td>
+<td>⭐⭐</td>
+<td>Homogeneity is the optimization criterion</td>
+</tr>
+<tr class="even">
+<td><strong>Network Graph</strong></td>
+<td>⭐⭐</td>
+<td>Visualizes variable relationships</td>
+</tr>
+<tr class="odd">
+<td>Correlation Circle</td>
+<td>⭐</td>
+<td>Global PCA doesn’t reflect split logic</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="correlation-heatmap-recommended" class="section level3">
+<h3>Correlation Heatmap (Recommended)</h3>
+<p>The heatmap reordered by cluster clearly shows the block-diagonal
+structure that the algorithm discovers:</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" tabindex="-1"></a><span class="fu">plot_correlation_heatmap</span>(clusterer, <span class="at">reorder =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Correlation heatmap showing cluster structure" src="data:image/png;base64,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" alt="Correlation heatmap showing cluster structure" />
+<div class="figcaption">Correlation heatmap showing cluster
+structure</div>
+</div>
+</div>
+<div id="cluster-quality-metrics" class="section level3">
+<h3>Cluster Quality Metrics</h3>
+<p>Shows cluster sizes and homogeneity (λ₁ / Σλ) - the criterion
+optimized at each split:</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" tabindex="-1"></a><span class="fu">plot_cluster_quality</span>(clusterer)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Cluster sizes and homogeneity" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAAA3lBMVEUAAAAAADoAAGYAOjoAOmYAOpAAZmYAZrYA//86AAA6ADo6AGY6OgA6OmY6OpA6ZpA6ZrY6kLY6kNtmAABmADpmAGZmOgBmOjpmOpBmZgBmkJBmkLZmkNtmtrZmtttmtv+AAP+A/wCQOgCQOjqQOmaQZgCQZjqQkDqQkGaQtpCQttuQtv+Q29uQ2/+2ZgC2Zjq2ZpC2kGa2tv+225C227a229u22/+2/7a2/9u2///bkDrbkGbbtmbbtpDb27bb29vb2//b////AAD/tmb/trb/25D/27b//7b//9v///9WO1MKAAAACXBIWXMAAA7DAAAOwwHHb6hkAAAYaklEQVR4nO2dC5vjOFpGXU0XRXU37GxlZhbYZRpqGVgWysN1oL07QK1JJ/7/fwhLsmz5GseSnM/tc56nL0mV7OTNiXWxLCcFgGCSW78AgCkQFESDoCAaBAXRICiIBkFBNAgKokFQEA2CgmgQFESDoCAaBAXRICiIBkFBNAgKokFQEA2CgmgQFESDoCAaBAXRICiIBkFBNAgKokFQEA2CgmgQFESDoCAaBAXRICiIBkFBNAgKokFQEM3tBT3//kOSJH/6o/rvc3L/Ov6L//xpajP/Um7m7meXN7NlgmRlS5b/PoR/ia19TH9ks7i5oKdvE8PThdA/f/tm4t2WRTV3H79gQcNktZ6g0x/ZPG4tqBWr5ON06Gky9W4zuxX/SMQSKKs1BJ3xMmZya0FLsd7+tvzKl9nfv5rozNs6HdRxovidrbjTyr7zD+UTX73qonf/8G3y5ke9nTS5+85spvrsyvLmkPpSOGWa7W2QQFl1Bf3pF0nyR7981Zt5+OmDCvJ3j8nbl6L1Q5Pi2xezx9aW/0n/wP6KflrvQ7+Muw9mL7n6ZBZwY0HLN2K+ZOdff/W/RT/0rD4sVqFX3r39ZH9WHUaqL+vxsSzVFbRXZpuH2VBZdQStipVP2ciSD3VGzQ+r43fpW/mDfqL6QNA83Qj65u/NlpYeTW8sqPrSNo96oasfvxa/140u83SqDgNaQxXN/Y/F/5ii5YO7X/6HuxlFmlQbrMq429scobJyWgoP+itdbidLzBbKv8stJN+ZJ9wfqkPgw+s5rb4B7pbf/lj9SvO08+rKxx+7L/4KbiyoeZOWXujlj99W1pmnq8osU//P3EqjSv3tb18dQTN7ALVl3O1tjlBZtQVNmwNcWcAcR8u/zc6cHza70r/Y2XL56w/uDp1XZw7US2t44YKaLE0byH4d6xol09VKjR6BaeoXs/EqPFvG3d7mCJVVS1CblfoFc5QzfzvHQfND+//UfM87W9aF2kHXry4zei8cWBFbxZuP47MZWLn7xyr0PBkO3RT/7988OqGrD0Jt3C3jbG9zhMqq1Qa1G1VHuJ6g/R+aTfe3rH/qPN15dR+rg+sC5HSSyu5nP/Qy9t98SJJOg8bghl4fXdK6finSpO44ObVLvb3NESqrlqBLj6CdLdsj6MfWPqoef7mf3sFkNgKHmcybyZuezPn7ug3kHkXcN10+f/erMr+fHmtB86T6ea99bra3PQJl1e7Ft9ugbUEn2qCdLetnnKddQdWvfFh8SLi1oAODz7pHqD6FJ5X8z9UJieaz0OOdnw/NExX1QL09KpguqaYp425vewTKqi1ouxffEXS8F9/ZsinUPO1+fUzbdOm4ya0FbU7ffWWjq9va5Xv6oW7r6BZOPbannmgJWn94b6pOUt0geiicMs72NkiYrKbGQTuCXhgHbbZcF62eriux6vNYXmXdXFA7AUKNkFTRHcvP4Wf/bprVzuyIH/SI2+e/Kz8TfSqo3a4xm9Gd2K6gThlne1skSFaDZ5J+VRRDgjY/NBv9sx9Ntd3dclW710+bfVQvQx98l77l2wsKm2LJeNHiQdACQWEuqW5Z6BH5Kynbxcs7pQgK87Btpmvb77phuvzUMoLCTD7/4nHJTDA1Avjz5XtFUBANgoJoEBREg6AgGgQF0SAoiAZBQTQICqJBUBANgoJoEBREg6AgGgQF0SAoiAZBQTQICqJBUBANgoJoEBREg6AgGgQF0SAoiAZBQTRLBU03uT6cJI7v69U28s0uZxafhYLm21zAUBCnQ70cTF7amWPoMMsENQvtw3LyZkXC87NaGCaNfFOtrbJM0Oz+ewT1IU+ecivo8VEt/ZZtctHn+CwS9Pjupd0GrVf+TXpPzMD/XWyRRtB3L+5Dxe2yueqD82H2C1rwJlSdNNJJqgX9w3z2Lqhpfg43QtcXVNp+lrygTK2Pj6CeIGjYX2zQVRKC+jJVxdcg6IIXZG+oMbSqM4LOZlYnCUEDD9Qj6GzyOcNMCIqgtyKfM1CPoAh6K3Jzm8DqVkUjJ5IQNPALQtCwICiCigZBEVQ0CIqgokFQBBUNgiJoLPKJ8xmzQVAEjUJ1999C3/fXYyIdgiJoDE7ffBp9dBUbErT8Jpo7cs662gJBvwy2JagRc9YNuxH0y2BTgv7x1+p02Ombv0BQ6ehbUFd4Xcpxc0HthzT2uOH8/JCqOj43lwOpOW+6yk9NR/F0+KuD02NE0JuT68/H82rNWwtaf0gjjx1KQXNlZvqk5mlk5fs+Pj6ZWVrqwelQ/pXVaSDorTHTQMzlB8u5taBXUL5hdan/6Wt1vdrpoL+dbz6dVLWvZrzqZ8zU16v2g6CROB3MZzE8U34u2xL0/PyxrOFfS0FNxVH5mKuqXedhQ0HQ22OmIfsuwbItQYvsoazh1VtuzlKUbdE3//aIoPLIdY8g23Yb9AqUoMf3//Xrl6I+ghbVQfSIoBLRXXnP9S02Juj5+S/LZqhug1Ym6hZOThX/pbIxQYtUneG1vfgivXsxB8/kCUG/TLYmqG7XpHYcVB099eUspakIKg69wlr65LWNDQkaaT8IGouyn5DZAcHFICiCRkINM6lBer9V6xAUQSOhmltK0N0M1EfaD4JGwh5BbzhQv2Q1RATdi6BVGzS74SUfyd/MBkH3J6gZqPdceh5BEVQ0CIqgokFQBI3F+fnWM+oRdHxzCFqkIW7bgaAIGgnPU0gVCIqgkWjmRfiwvqBrsUoC45tDUHtNkh/rC/on81nlg0PQWOR+Q/QGBEXQSNSXxm+sF4+gOxE0DAiKoKJBUAQVDYIiaAxOhyfaoGFAUNEgKIKKBkERNBa2jqeK9wJBY5Hev2YPznpui0BQBI2Emiyi1su84fKLCDq+OQRVk0XUepnqz3IQFEEjoa7qVKu3IqgfCBoLtWJD+kQV7wmCRiN9UD15v3n1CIqgtyFPnCuS1Upww519BEXQm6BWIK5XIVZraY7MHkVQBL0FZgH79KF68NA86ICgCBqDSzfyMsP31cJ3CDr5JuJsbueCXuL4TtXuduE7qvipNxFncwg6iWl+1o3QVo9Jcf3Fj0Mg6PjmEHTyLh9tQdUSD/q2gX0QFEFjYfQbvk9Sq4pvNUg7ICiCRkLdFlAxuIBty8lOfd8CQRE0EvouqsXIvTpbw0zG1uGlwhEUQSNhj6DD5+JbA/W0QafeRJzNIai9V+fIOUx9f6t6DLTsTQ0vNYagCBqJS2P180BQBBUNgiJoJE7/GmIrCLpoJ1UDamJzCHo6mN7R+W+9ZtTbkOwT1zxWgtrH1sSxx93yVsKpx8mVr2fo8eUErgtMo8bvhoftELQh13M8M78Zy3VISx4njX9/6PjYe9wt3/Fx8HHi+fpmscAOvbj1yPqsCNpg7qJww7sd77eKLxB0DspQz0VsEXTpTtrnmHuzbxYJumSJ82vKrPxNKFvq3z2PzBaZC4Iu20l+aWB5maBfQqCW00FHlLP0jR/Lq/jBQwOCWk5/bvLx7MX7vIQvIs/FO5mefYOgYUDQxTsZXhULQRvKSv7+NaUX78eCncyZHoag1f3iPW84h6BLdqLm4JoZjaObQ1AVkJpqNzxTfi4I2uxEfdezsYto2qQXV8JAULW6nRJ0uKaZC4I2OymPi8fHh5Hrs6/dHILaI+jgJR+zQdB6J+obr+bYhvnGI2jVBh2bsDwTBG0Jqq49CNNmQtBqyvLIrK+5IKhTxT+oGWKnA1W8IBDU7SSVX3ffm0gjaFjqPBfNU/gS8gy8EwQNC3kiqGjI09lJyFNz+w00LOTZ7CToqbn9BhoW8qx3EvbU3H4DbaBGCkFrHDTcqbn9BlpDjRSE3hE0zKm5/QZqoUYKQ7cNGujU3H4DtVAjhaHdi09CnZrbb6AWaqQwMA4aC2qkICBoNKiRQoCgoiFPs5Mwi1kWBBoa8uQIGg3VPcoDrc203zwRNBam+878Wk+6w0x+SwkRaI0aB1UwDuqHM1BvFv3363YSqMVel82ZJD9apzoVDCwHwoyAjtxeZi7k2ZosoqBKCsXxkXFQf5wjqGnND9946trN7TfQsJCn2wbV61nSBpUEeTJQHwuzRD15esI4aCxSLzMryBNBI+E5lb6CPJud2GqeKikIdlTED/JsdpLev2YPIwsnX725/QZq8V2jxUCezjjoU5Gra2gYZgpD7nuPJAV5tgbqj+8/6T/+m9tvoJZ6YIQmkxetU52nr18QVBTk2exEzWpIn6ji1yFPnLOg6qTocIuVPJ2dpA+qXvIbvSPQmslREXXCrj5pp5r+I/NGyZNx0FhMjYqYqWPV7QDMg+FpeeSJoJGYHBUx2lZOHt+NT38gTwSNxOSoiHGymtmYv/nPAzfnHcNOFnliWCQsk6MipvlZNUIzFXl7XL+3nPd+8+QIGoupUZG2oHfO4bQDebbGQcNtbr+BNkyMirSqeNMU5ea8w7TOJIXb3H4DnUWrk2Q8He4qkWezE7+LkTqb22+gs2gNM5lDA1X8MM4RlE7SerQG6jPuHj0OnaQYXB4VyRJ9qtN03vOEYaYxEFQ05NnshBn1QWFUJAzNTphRHxRGRcLgdJKYUR8URkWC0BoHZUZ9OBgVCUPrTBIz6qVBns1OmFEvEPJ0dsKM+qAwKhIExkFjwahIEBA0EjsaFUmuYWkCvqv9dzYnOtBV2NGoSPLX81kuaJH6rwe8kUBXYUejIisJWphJCyMXaF+5OdGBrsN+RkXWE7RQX3x6nYHYzajIykdQ7kohiE3kuY6gesVq2qDC2ESe6whKLz4sO8pzvSp+JvpgywzwC+xnVESaoOfnMvdsuLe/iUBXYyejItIEbV0zO7I50YGuyR5GRaQJahi+49cmAl2NnYyKrCDo6fBRnfW4htZtgLa1llDUc8eWHY2KrCLo05WC5sNHBgK10IsPKai6TNsyq82Ub3nJ6lUEDQN5NuOg1xxBR46fBBoa8lz0AWSjLX8CDQt5OgXUvSZmNeuz8VtUEWhYyLMpYKrtCfksx8fxkRMCDQt51gXsUi2X5y9WHartjoMi6IbybDpJ1VItfgtiEGhYyHPBEXTO5vYbqKZeVmQXlx2vI+j8Nuicze03UIPnKfga8lzSi5+xuf0GWhHmdvHkucvr4tcQNMzt4skTQWMJGgbyRFAEFZ0ngiKo6DwRNI6gppM0ddJtFuTZGwf1g0ANp4MZTrb/LoU8e2eS/CBQQ2q9VIvceUCezkD9bhb9jy+oUx1xZi6QoDta9D++oE51xNyGQIKGgUA1TsU+fHn2XMgTQWMIam9kXDit0UWQp1OgrOTvX1O/vjyBGuql6fewRv1KguZ3L2WDnl5nEEHtZYXjV2/Ngzxb46Cqx0mbKYigZuEGv4WZCvLsjIMqQel1hhE0DOTZO4LSqEdQSXl226DMqA8jqLqycCrJPGnPDR85LpBnuxefMKM+jKBZmeNUB16tDeiuD5gnCDoM46AxBDWnOsfPcpqfN4OleoSPPKcSCASBasypzvH+ZncN4Oz+ewQdplvF+80OI1DDRUHfvbg/Lx+226AbW291HUHNVV6ZXyOUQDWXBDXNT9sIVRU+naQRWsNMCoaZVhd0YnSPPFsD9cVkqtdsbr+Baq6q4vUDBB3BOYKaPiUTbIMIOr30TauTZFe3HhqUIk+3Darq+OGbd1y9uf0GOovuMBNH0FFMARa7WlfQ3kA9go7BOGgMQU/ffBp9ZCjrdeVnvYQTgo6AoDEEVVVSZd752adOIs+mgK3mqeIDCFpUt5m7MGXkIuTp9OI9TyK1NrffQMNCnr1xUD8INCzk2TuT5AeBhoU8mwLm7IYnBBoW8nQEfaSThKDi8uyd6vSDQMNCnnSSIgl6OnheEm9eqv13t3nSSYokqJkE4pspedJJiiZoEcBR8nSqeCaLBBfUKMqpzhCChoFAXXJ9ptPnHB15ImgsQVWVZMz0uEiBPKniIwl6OniugWFeqv13t3l2C3iuVE+gltPXxk+u8QoraOs6hOshUIsVlOUsAwvKNz6EoGlzCQ3DTGEF5RsfQtDmCOoHeXYLnA5U8UEEDQN59nrx3LoPQSXlyThoDEFPhyeG7RBUl5EWaFjI0xRg4QYErcpIy7NbIGVYJJSg3BgtvKBlpn7Tlgm0hhujhRc096vfCwJt4MZo4QXNfBcAJ9AGbowWWtDzc4CLaAjUwo3RAgvq3fxsbW6/gdZwY7Sggvo3P1ub22+gDdwYLaCg2ZX35T2+H9aZQMNCnssG6k+Hkd8i0LCQ56IPIB/VmEBrzA3j533hRyHPJR9AnjyNDZ4QaE0aolFPngs/gI6g3Lqvh+cpJPtS7b+7zTOMoL3N7TdQC2tdIaguIy1QC6sFIqguIy3QJiJOfCCowEAtzKhHUF1GWqBhIU8ERVDReSJoNEGZUX9DQS9tbr+B1jCjHkELgYFamFGPoLqMtEAtzKhHUF1GWqAWZtQjqC4jLdAaZtQjaCEw0IbJGfW58yM9MW+4L0WeCBpN0CnKw6v+ozg/l/8ZuaSBPBH0FoKau6ZVi1kfH1UrYLi3T54IGklQ5yqafit0wMl8sDFAnggaSVB13YH+++PAWL25q19rBGp4Aj55ImgkQe18UNWT7400mcOle9DMW70krlBoori2wLzN7TdQi51RXx4m+2P1PUHzkcu+yRNBIwlq7x6tjqA9QbtVfD626hB5ImgkQZs26MDFH51OUja6KhZ5ImgsQU0/vnRwoPvTGmYqJs42kSeCRhN0Cneg/vg4PiOPPBH0JoKq+8grP1X1n5n+OuOggyBoNEGPj6xuh6DiAq0xnSRmMyGorEAtzjDT0k0U5Img0QR1BuqXbqIgTwSNJihHUATVZaQFWkMbFEELgYE20ItHUIGBhoU8ERRBReeJoLEEtVPq6cUjqKRALedn7/tKFuSJoNEEZQlwBNVlpAVqseOgfpAngkYStJo17wl5Img0QR/pJCGovEAt3OUDQXUZaYFa6CQhqC4jLVALnSQE1WWkBVpDJwlBC4GBWrhPEoLqMtICDQt5IiiCis4TQaMJynxQBBUYaA0z6hG0EBiohWuSEFSXkRaohas6EVSXkRaohSMoguoy0gKtoQ2KoIXAQBvoxSOowEDDQp4IiqCi80TQGII6N0niXDyCigq0IcSMUPJEUAQVnSeCIqjoPBEUQUXniaAIKjpPBEVQ0XkiKIKKzhNBEVR0nggaQ1AG6hHUlpEWaFjIE0ERVHSeCIqgovNEUAQVnSeCIqjoPBd9AHkyNlOcQMNCnks+gLy0Mx82lEDDQp4LPgBzvWI6uD4rgYaFPBd8AMdHdYYkGxyAJtCZtFpJNJnGWSKoXvhyeEECAp1Hq5VEk2mCBR+AybKVaHNir/fEDPpbiVPG68UFpdVKosk0RRhB4TparSSaTFMEruJhFq0IaTJNEbiTBLNoVUI0maYIPMwEs7gkKNQEHqiHWcyu4mFRLzVLfBfF2jmzO0lw4zMlO2X2MBMg6E2YO1APCHobqlaSueUsTaZxEBREg6AgGgQF0SAoiAZBQTQICqJBUBANgoJoEBREg6AgGgQF0SAoiAZBQTQICqJBUBANgoJoVhD0/Jwkyf1r88Tx/cXLb9pl9KOna3c0axpw78UVaeuRQPaVZ3xBcx1F2ry30+Hi9WHtMufn8j9Zcuminc6O1FVoFy+k6L248hnhgu4sz+iCmmsWy1Ds68yTi3dm6ZSZd9ljp9Dp8GSvqLjixakbyMgWdG95Rhc0q17f/1VxlN+xi5eAd8uYghe+vUOFLgXaL5Pdfy9b0L3lGVvQobd0KdDhGNLpUoOFsukPoV/m+O5Fdht0d3nGFlTXDB0uBTpUpmrdXFUov9QT6JVRl6jLFnR3eW5F0PxSm37wU3AaQ7PKqCpqH4JuJs+NVPGXvu9j9dh0Q6tbRq+SJFvQ3eW5WicpT+p7/85u1NdlshmjdgM7qruVM8tk1RKB/ncpjsfe8lx/mGlGoN0y2Zy3ODiWcmFXAy9O+BF0d3muNFCvx4brZ+YNLNdljo+Xv+/9HalgzLpcV7046YLuLc8VTnXqm6e7r3LGUpitMlVNcfE8W2dH6ZzKpffixAu6szyZLAKiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIgGQUE0CAqiQVAQDYKCaBAURIOgIBoEBdEgKIjm/wEycVY0fhX6ngAAAABJRU5ErkJggg==" alt="Cluster sizes and homogeneity" />
+<div class="figcaption">Cluster sizes and homogeneity</div>
+</div>
+</div>
+<div id="network-graph-if-igraph-available" class="section level3">
+<h3>Network Graph (if igraph available)</h3>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" tabindex="-1"></a><span class="fu">plot_network_graph</span>(clusterer, <span class="at">threshold =</span> <span class="fl">0.5</span>)</span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Variable correlation network" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAqAAAAHgCAMAAABNUi8GAAACLlBMVEUAAAAAACAAADgAADoAAE4AAGMAAGYAAHcAAIsAAJ8AALMAAMcAANoAOjoAOk4AOmYAOosAOpAAOscAZjgAZmMAZmYAZosAZpAAZrMAZrYAZscAZtoAkJ8AkLMAkMcAkNoAkO0AtrMAttoAtv8A28cA2+0A2/8A/9oA/+0A//8dAGMdAHcdAIsdALMdAMcdAO0dkCAzAGMzAHczAIszAJ8zAMczAP8zZosztgA6AAA6ACA6ADo6AE46AGM6AGY6OgA6OmY6OpA6ZmY6ZpA6ZrY6kJA6kNtIAItIAMdIANpIAO1IAP9IOmNIOotIZotIkCBIkDhIkE5ItgBI2wBcAItcALNcAMdcAP9cZmNcZotckE5ctgBc/wBmAABmACBmADpmAE5mAGNmAGZmAHdmAItmOgBmOjpmOpBmZgBmZmZmkLZmkNtmkO1mtttmtv9uAJ9uALNuAP9ukGNukHdu/wCAALOAAMeAANqAAO2AAP+Atk6AtmOA206A/wCA/yCA/ziQAACQACCQADiQAE6QAIuQOgCQOjqQOmaQZjqQkLaQtpCQttuQ27aQ29uQ2/+zs7O2AAC2AE62AGO2AIu2ZgC2Zjq2ZpC2kDq2kGa2tma225C227a229u22/+2/7a2/9u2///bAADbACDbAGPbAHfbkDrbtmbbtpDbtrbb27bb29vb2//b/9vb////AAD/ACD/ADj/AE7/AGP/tmb/25D/27b//7b//9v//+3///9/kGx8AAAACXBIWXMAAA7DAAAOwwHHb6hkAAAWEklEQVR4nO2djZ/cxl2Hhe2e5catE4cEDqclwSbOgYNNE4wdKA1tsNua8lInNS6+FmjCe8+Yxi9LsrHb2tBS8LrJUaDEYMNdSwGvX87xZf87ZqR9Ge1qd6VdvXxX9zyfj+92ddJoJD3+aWY0M/JaAMJ4ZWcAYBQICtIgKEiDoCANgoI0CArSIChIg6AgDYKCNAgK0iAoSIOgIA2CgjQICtIgKEiDoCANgoI0CArSIChIg6AgDYKCNAgK0iAoSIOgIA2CgjQICtIgKEiDoCANgoI0CArSIChIg6AgTbUFXb/ibb4afLp/2HvkVuwK0cXL3tyNYX/rLP/BJzzPe/F6qmz0pbT+vRtD04/kxlsyvx4sevN9KX7vRtz6MQnMJVtRlmoL2lr1vCPRD1EmEPTBa15IXHrxDKT03mtzSQW1qwwIGmyfBAQVx1zaQAIjQ7IrNVZQs7TDUtJcjPpvMCY3wV4GBE3sHYKqsxze480dft78+qGNfi/aBave5r9/zZt7N1Snt9xc0X/7Y8/71PWuVuv/5HmbX+r6ZULxju+YGHYlDG6tH5q1P/Tnt3pJXu/87m253rcX65039x9XYlL4R7PNjqu93HvWsLag3fTC7f802DwsBawFPwfzstzefC5FgUSLqgu6Ft6KVzuX0WKVXQ0+PfJ/gSTO8uV2dOzegs3VtexoB6JuKF7/25f+t9VJJ1ClneStzu/elut9e4kIOpCC1yk3t3NzpC1oL71w+3+169mFR9qRMiYvdnmvID6LVF1QGz1utLUyP3/ilg2mR4Ir+Mj11v8E6rjLl4PlP/CMEaFWyzb6hH9rpzfvJB/WvcICbjvJ7u/eljF76f4H6Ethx3W3uLxs4+TcjXCnTk6C7c3HJfsjzOp8bF6Wg/8HyQsjelRd0PAW2BPsR//yCXtF2yG1VzrsLG8XCdqRJwiDYQRul+V6KbVTD5Z3Alggwmq36t3ZMmYvXUEHU2gXR9rJf9/sMBDUzUln+/kgVM7dCFyNy0tgeIrqnB6VF3TNGtHWbv1b4U1wPiikBUsCSZzl7ats/xz8zUYo97YbFbRjXpBaO8nOb2fL+L104mp/Ck6QtuuZvP/DYhggnTKCzeVqcA9/bHHzVfd/QSQvy5ESwyxSeUHtPf7fw7q8rYDv+PaPFvsFdZcv965y8Lc1Lypo9Bbf+RbUUfoEdbaM2UtH0JgU+gQ1Yj5ml7g5CQVdC9T96hXvyHJ8Sp0i9bjWLGUqL6i92/1ZeJcLo9+DAUHd5TERNFKAcypJpqY/JoIu9TaK2UvCCBpWeObd9Nq5NCt+8rANn48tdgq6/XmxRep/pgwqTXBr7MS0pVa3ktQT1F3efnbjlkHnI8lFm5mi5b6IoM6WMXsZUgaNEzSovc9HYnd3I68d5MMGiMG8LIdVrBkOodUXNGhZn7efgmquNWt+IIJ2l5trPtdXi9/81dZ7vWscbaiP1pwjgjpbDuwlWCWuFh8naBBC59303FJEYG6Qu7i8BAmszXIIrb6gwfUNLlDXrfnBMmiv+hLfDtqraHQfdb7USbzb9hgVtLflwF7WhrWDxgpqE5p30wu3DxqazJGtX2n/B4zJixOqZ5QNIKi5jO02IluP3vGdVece2Ktft5cPPkl671uHw+8d2p1F3g2/BU9v/sJ+6he0t+XAXuwzoR3vuk+SnBQGBA1bItycBNtf7/SF6bQpxeQlTKCvbWym2ACCwiyDoCANgoI0CArSIChIg6AgDYKCNAgK0iAoSIOgIA2CgjQICtIgKEiDoCANgoI0CArSIChIg6AgDYKCNAgK0iAoSIOgIA2CgjQICtIgKEiDoCANgoI0CArSIChIg6AgDYKCNAgKw/HyI3EW8jw+mHHyswNBIQMQFKRBUJAGQUEaBAVpEBSkGWJH+A7w1v1fu5F1ylOsCBuQeDvWgpeDzQ8KmsJYBIUMiLXjwaJ9bdj9X7mKoFAysXastd/bZ320Stp/a/YVjQ8W7fvt7PvPzcIXX5u7sTb8XfUIOuPU7ePAetm5iBe08+LPnqAPvnzVLrbf1q8stVbtq3OXWu2lyVOeakUoECunIcUj65zyEbcwTtDgrt/qxFNjpikBtMsCKVKeakUojsDOkHKvT+JbvH0T81Io6OHgjcxBcTRcmjzlqVaEwnD8LNnQEZUk89MRtBV463zr1Je6NidJeaoVoSgifpZraPy+V03NZ/1KUOS0sq4aM80NfS38ZcugHXPDpSlSnmZFKIg+P0s1dMiuTe2801C/6nm/8UftWrx9f/1SK6zLBxGUWnwVmQFBi0wZQcWoe299zt96vP6G/+HX6+bjoXqJrU0IKk3TtkU2C96pCaAXnztkAufvnTIfHi03hCKoMFZOQ9FtkfYO/7UD9fpbv2Pi54GS7/EIqktgZ0ih58gK+ubPnaq/+Xnz65f9RxEU4nD8LNZQK+hbnztU/+Lr9a/9+O+/ue8QgsIgET8LNbRuDX3j0Yu/Hd7pTx6gkgQD9PlZqKFW0Isf+93jRtBHQ0GL2/dAXspPGUHjKFvQ+skPv26Koj9//OLHjiMo9NP0bl/2t15q3vO33GyubLKCFtjaFFSTPm81fcO3zaDF7XkwK+WnjKAxmAB659VF4+Xb15or/qYy6knOc6RGgbvuz4n7OXbWmnTDk3qrIeg02Dv8ygvN5u1v2A+FC9rf3a5RmqIRQeOKO+mGJz1YnEPQLLDX4u7HrzXvXipH0IEOy2UZOk7QdMOTVr1PEkEzwV6L25cXm9+9WZKgA0M+Sgqi4wRNPjzJrvTft7jFZ0PTXox7m+58vdkRtPBH8q3+sFmKoWMFTTo8qdVdLSblxFmADvZi3PnKNy/1BC0hE42RXwthEkFjhye1uqvFpJw4C9AhuBjvbLmpJGgZt/lJbvHxw5O6q8WknDgL0CWoJgUB9J7vbyrFz5iQWbihySpJCYcntRA0Q0rrLNIjRseig+jYdtCkw5PaIGhmNMrqbudkIfHC3Bh/5EmHJ4UgaFY0SuuwHMlD3NIiFeVRpyihBKUM+ejPRPLlOYCgmjRiP5aYi74/FJYpBJWkMeRzwYzYtfunPKcZQ1BFGkO/FMuoXXf/lu80YwgqiMATxgS7bt/mc55mbHx3uyxSzmbFjYLAA8Zku7Z/znuasYigsftJ0x/Urtt5LI+gEzJgRXmGjttzo5H7NGNjBU3TH9S25K915mpC0MkQeLyYfM/5z+I0TtBU/UFtzxL7cGkg5cRZgLini8XnIumeyxc0XX/QVqs36TKCTkBs+6KuoO40Yxef8z9wKvsR9GMFTdkf1H4dTDlxFjY4Qx4tFpyL5Ht2pxn76+O5hNBJBB3VH3SVMUmTM8QHaUE704yZAHqgFEHT9Qdd7U1ni6BpEXjynXLXzjRj5sO+A3kLGtMOmq4/6KozHTiCpmT4g+8ic5Fq1840Y4aLv3gqX0FjSdMf1LnVI2hahrugK6gzzVg9LInmWkmKJ0V/0OUg/FKLn4REj70LJ0khNJxmzMbS3zyVbzNTSSkjaGvcU++icpF6z71pxmwoPZBzO2hJKW9MQaNdkUeLoCtob5qxN3w7FXO+jzpLSnkjCto3mCNBp4xyGLvnRpGdRUpKeQMK2jccbmyfjCLyNMme7YOvArvblZTyxhO0b0Dx+DBVRKYm2HO7Q2hhHZann37RffEcgg4j9ezzmoL2+g0UNeTDW2gzaXe7yKs7EXQI6Sf3lhS0oEyNEzTd9It2gy/TH3Q0lRC0sGGd4wRN3d2O3kxjcGefX7EfEkysWJqh5XcPGCtouu529w9TBh2DM/v83S8lnLhOTNAipxaZRNBR3e0og44jMvt8894LsydoobmZ5BY/avpFyqDjiMw+H1o6U4IWPL1dskpS8ukXEXQc7uzzd171Zy2CFp2Vse2gabrb2XB7/9epJI0kMvt8c+UD13QrSYPtm8VPsZxpdzu7AkM+xuHOPt+884fXVFvqY54QlZAPHnUWjjv7vAml5g4/Ni6V8vaCgWfspbyIBkGLpzv7/IqdfD7sLiLX326wl1L570kqKeUNJ2js7POjFS2+6Nc/H0NZL0NE0DKInX1+lAKF151znzEkcU7KT3kDCjpk9vnhiiJo8JnpF4sjfvb5YYoWLKg7pU29fvJQPfvRmkmJCFprM3F/UN7yMTWNGEcLf5WCO6VN/c19h0oMoWMFTfc67tYy7aBT06doCS+jcaa0qde/+FvKgqbsD7r2ISJoBriKlvE6L3dKmzcOnVQWNF1/0PW/+z6CZkJX0VJeiOhMaWOCqLagqfqDrh6hDJoVoaKpxy9lgjOlzd8c164kpeoP+uBPbiFodhhF0w8PyYbelDYnfcMBkWamhLf4of1Bl5eoxWdKo0xBu1PaBBG0mP3G5MT9POX0i1ZcJg/LEmf80n9eTjh+KRu6U9qEgpZ3jcbumddxl4gzfum/LoU9oIqsJ5X/HCnr/qAImi3R8Ut2oEixTU3l+8mzeGki45ead3+1wAga22G5BBBUGXf8UtIRoBmS55Q2SUFQZSLjl+78wc3iKkkyIKg07vilt68VHEAlQFBpnPFLK4vNu19C0BJS3nDnPA3d8Uvv+L6/9dLGO1cIKk4pnUWEQFB1yuhuJ4SXH4mzkOfxVYASOiyDC+d9HIUP+QAXBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpELTyND1Ds+xcTAqCVhwrp8H8KjsnkzGj2YaEBHaGzOalns1cQ0IcP2fU0JnMNCQk4udsGjqLeYaE9Pk5k4bOYJYhKQgKwrx/2d96qXnP33KzubLJ6rmyaQZbmxC0umx6ddFo+fa15opvBbU/Z+9yz16OISneygvN5u1vBLEzjKAICkJ4dz9+rXn3EoKCJt7ty4vN795EUNCk6d3bdOfrTUdQKkmghHfnK9+8FBG07BylZwazDEnxmu9suYmgIIsXVJGa93zbzmR+7io7Q+lB0EpDZxHQhu52oA0dlkEchnwA5AaCgjQICtIgKEhTbUFrtn5QKzsXMAVVFtTKaZjZFhZoVVrQwM6QCh9l1anupXP8xNDZpbJXLuInhs4sVb1wfX5i6KxS1euGoBWhmtft/aP+tmO1s/5DZ2qntxs7z+3bRmvTbFJNQVubnjtovHzlRO20bwQ9//yxc89W9EirTkUvm3d6f6124TNGUhtBz26vXTha0SOtOhW9bN65Z0/Uzh1rC2r/vfxjZecJJqGqgl44erD2hTMdQfcj6KxSUUFr3tnt5z9bcwT195edJ5iEigra8s4//+ljNacM6i+VnSWYhMoKWnv5oTMdQW0tfsutsrMEk1BVQU01KQigZ33bznRu39arZWcIJqKygtJZpBpU+MrR3a4KVPnS0WG5AlT72jHkY+aptqAw8yAoSIOgIA2CgjQICtIgKEiDoCANgoI0CArSIChIg6AgDYKCNAgK0iAoSIOgIA2CgjQICtIgKEiDoCANgoI0CJo1C3ag3kLZuagMCJotVk4DQ52zgvOYKYGdIZzZTOA0ZonjJ4ZmA2cxQyJ+YmgmcBKzo89PDM0CzmF2IGgOcA4zY8F75mF/29MLT/k7F57w/SeNoLQ2TQ2CZoYJoHv93SZw/uTC3m1P7zGqEkKnh1OYGfYO/4SJm8/89MKeD1pHETQDOIWZYQU1Zi7s2b3wzMO7nnqSQmgWcAozwwr6zMO7Fz66YO/1u6glZQKnMDMWrKFP7dprQ+dHfvbhnVSSsgBBs8MKunfbR03Zc8/OIJZycqeHc5gdQTvo4zvDoqit0HNyp4dzmCFBNck2NIXtoJzbDOAkZgmdRTKHs5glDbrbZQ2nMUMadFjOHM5jdjSCnwz5yBQEzYzGkM95Uv03lSFoVjSGfsmNjfCuxwofWrE0RnzLiQ3xttzqHlmx9BtZgKEb433jlT2wYhnwMX9BI35W19CqHlexDOqYu6B9flbW0IoeVrHE2IigGVHRwyqUOBlzFvT9o/62Y7Wz/kNnaqe312oXzNeKtjYh6NTEu5izoZueO2ii5isnaqd9I+hfHau9/FA1L2U1j6pIhpiYs6De6f0mcH7GSGojqOHcs9W8lNU8qgIZJmLegp579kTt3DFH0F+o5qWs5lEVx1AP8xb0wtGDtS+c6Ql6dn81L2U1j6owRmiYr6E17+z285+tdQU9/0tUkmCAURLmHULPP//pYz1BXzlR0StZ0cMqhpEO5i2oqbef6Qp6+mBty1/mu8OSQNDJGa1g3k31XlBFqp31/e21l33f33Y15x2WA4KmIdIZeYyBxT5Lqux1rOyB5UB0OMdYAYs0tLqXsbpHljnRAXHj9SugQxMdlqFLdEhxAvuK6LTMkA9ok37++aLGJVUbBE3GBNN7I2gWIGgyJpl/HkMzAEET0Tf//O5EUysiaAYgaCKc+ef37AzmUeYeXwwImghn/nn76/EnEbQgEDQRzvzzT+xKKiiGZgCCJsKZf/6pDyJogSBoItz55x/3bXUpyfxgCDo9CJqM3vzzganJpv9E0OlB0GT05p8Pb/ILXkPhaXz1QdCEdOeft02hYQBtjHUUQ6cGQZMSO/98Y7SkCDo1CJqYYfPPD3eUyZanB0GTM3z++VhHma4+Czh5aRgREgcc5YUfmcC5y46Io7wyKRs4dZnSrTSl798MsXDmMsc6Okn3UYiDE5cHDQTNCk5cHjj9m/f6vu3gTGvThCBoHjj9m38m+EkInRTOWx44/ZttP72fQtCJ4bzlgdO/2X56EkEnhvOWB07/ZsNHnkbQieG85YHbv7l9h6eSNBkImgtu/+a9uwigk8OJy4VI/+bdCDo5nLh86PZvppFpOjhzOUFnkWzg1OUF3e0ygXOXG3RYzgJOXo4w5GN6EBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSkQVCQBkFBGgQFaRAUpEFQkAZBQRoEBWkQFKRBUJAGQUEaBAVpEBSk+X9Zmh4uvnS7vQAAAABJRU5ErkJggg==" alt="Variable correlation network" />
+<div class="figcaption">Variable correlation network</div>
+</div>
+</div>
+<div id="note-on-correlation-circle" class="section level3">
+<h3>Note on Correlation Circle</h3>
+<p>The correlation circle (<code>plot_clustering_2d()</code>) uses a
+global PCA which doesn’t naturally reflect the successive splits of the
+divisive algorithm. It can still be used for comparison with
+KMeansClusterer, but the dendrogram is more informative for
+understanding the hierarchical structure.</p>
+</div>
+</div>
+<div id="prediction-on-new-variables" class="section level2">
+<h2>Prediction on New Variables</h2>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" tabindex="-1"></a><span class="co"># New variables</span></span>
+<span id="cb19-2"><a href="#cb19-2" tabindex="-1"></a>new_vars <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb19-3"><a href="#cb19-3" tabindex="-1"></a>  <span class="at">NewV1 =</span> data_struct<span class="sc">$</span>V1 <span class="sc">*</span> <span class="fl">0.7</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.5</span>),  <span class="co"># Close to group 1</span></span>
+<span id="cb19-4"><a href="#cb19-4" tabindex="-1"></a>  <span class="at">NewV2 =</span> data_struct<span class="sc">$</span>V4 <span class="sc">*</span> <span class="fl">0.6</span> <span class="sc">+</span> <span class="fu">rnorm</span>(n, <span class="at">sd =</span> <span class="fl">0.6</span>),  <span class="co"># Close to group 2</span></span>
+<span id="cb19-5"><a href="#cb19-5" tabindex="-1"></a>  <span class="at">NewV3 =</span> <span class="fu">rnorm</span>(n)  <span class="co"># Independent</span></span>
+<span id="cb19-6"><a href="#cb19-6" tabindex="-1"></a>)</span>
+<span id="cb19-7"><a href="#cb19-7" tabindex="-1"></a></span>
+<span id="cb19-8"><a href="#cb19-8" tabindex="-1"></a>predictions <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">predict</span>(new_vars)</span>
+<span id="cb19-9"><a href="#cb19-9" tabindex="-1"></a><span class="fu">print</span>(predictions)</span>
+<span id="cb19-10"><a href="#cb19-10" tabindex="-1"></a><span class="co">#&gt; NewV1 NewV2 NewV3 </span></span>
+<span id="cb19-11"><a href="#cb19-11" tabindex="-1"></a><span class="co">#&gt;     1     2     2</span></span></code></pre></div>
+</div>
+<div id="selecting-the-number-of-clusters" class="section level2">
+<h2>Selecting the Number of Clusters</h2>
+<p>The <code>DivisiveClusterer</code> is compatible with K selection
+methods.</p>
+<div id="elbow-method" class="section level3">
+<h3>Elbow Method</h3>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" tabindex="-1"></a>elbow_res <span class="ot">&lt;-</span> <span class="fu">elbow_method</span>(</span>
+<span id="cb20-2"><a href="#cb20-2" tabindex="-1"></a>  DivisiveClusterer,</span>
+<span id="cb20-3"><a href="#cb20-3" tabindex="-1"></a>  data_struct,</span>
+<span id="cb20-4"><a href="#cb20-4" tabindex="-1"></a>  <span class="at">k_range =</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">8</span>,</span>
+<span id="cb20-5"><a href="#cb20-5" tabindex="-1"></a>  <span class="at">plot =</span> <span class="cn">TRUE</span></span>
+<span id="cb20-6"><a href="#cb20-6" tabindex="-1"></a>)</span>
+<span id="cb20-7"><a href="#cb20-7" tabindex="-1"></a><span class="co">#&gt; Calculating elbow method...</span></span>
+<span id="cb20-8"><a href="#cb20-8" tabindex="-1"></a><span class="co">#&gt;   K = 2...</span></span>
+<span id="cb20-9"><a href="#cb20-9" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-10"><a href="#cb20-10" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 2 clusters formed in 1 iterations</span></span>
+<span id="cb20-11"><a href="#cb20-11" tabindex="-1"></a><span class="co">#&gt;   K = 3...</span></span>
+<span id="cb20-12"><a href="#cb20-12" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-13"><a href="#cb20-13" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 3 clusters formed in 2 iterations</span></span>
+<span id="cb20-14"><a href="#cb20-14" tabindex="-1"></a><span class="co">#&gt;   K = 4...</span></span>
+<span id="cb20-15"><a href="#cb20-15" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-16"><a href="#cb20-16" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb20-17"><a href="#cb20-17" tabindex="-1"></a><span class="co">#&gt;   K = 5...</span></span>
+<span id="cb20-18"><a href="#cb20-18" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-19"><a href="#cb20-19" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 4 iterations</span></span>
+<span id="cb20-20"><a href="#cb20-20" tabindex="-1"></a><span class="co">#&gt;   K = 6...</span></span>
+<span id="cb20-21"><a href="#cb20-21" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-22"><a href="#cb20-22" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb20-23"><a href="#cb20-23" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb20-24"><a href="#cb20-24" tabindex="-1"></a><span class="co">#&gt;   K = 7...</span></span>
+<span id="cb20-25"><a href="#cb20-25" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-26"><a href="#cb20-26" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb20-27"><a href="#cb20-27" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb20-28"><a href="#cb20-28" tabindex="-1"></a><span class="co">#&gt;   K = 8...</span></span>
+<span id="cb20-29"><a href="#cb20-29" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb20-30"><a href="#cb20-30" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb20-31"><a href="#cb20-31" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span></code></pre></div>
+<div class="float">
+<img role="img" aria-label="Elbow method - DivisiveClusterer" src="data:image/png;base64,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" alt="Elbow method - DivisiveClusterer" />
+<div class="figcaption">Elbow method - DivisiveClusterer</div>
+</div>
+<pre><code>#&gt; 
+#&gt; K suggested by elbow method: 5
+cat(&quot;Suggested K:&quot;, elbow_res$suggested_k, &quot;\n&quot;)
+#&gt; Suggested K: 5</code></pre>
+</div>
+<div id="complete-comparison" class="section level3">
+<h3>Complete Comparison</h3>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" tabindex="-1"></a>comparison <span class="ot">&lt;-</span> <span class="fu">compare_k_selection_methods</span>(</span>
+<span id="cb22-2"><a href="#cb22-2" tabindex="-1"></a>  DivisiveClusterer,</span>
+<span id="cb22-3"><a href="#cb22-3" tabindex="-1"></a>  data_struct,</span>
+<span id="cb22-4"><a href="#cb22-4" tabindex="-1"></a>  <span class="at">k_range =</span> <span class="dv">2</span><span class="sc">:</span><span class="dv">7</span>,</span>
+<span id="cb22-5"><a href="#cb22-5" tabindex="-1"></a>  <span class="at">plot =</span> <span class="cn">TRUE</span></span>
+<span id="cb22-6"><a href="#cb22-6" tabindex="-1"></a>)</span>
+<span id="cb22-7"><a href="#cb22-7" tabindex="-1"></a><span class="co">#&gt; ========================================</span></span>
+<span id="cb22-8"><a href="#cb22-8" tabindex="-1"></a><span class="co">#&gt; COMPARISON OF K SELECTION METHODS</span></span>
+<span id="cb22-9"><a href="#cb22-9" tabindex="-1"></a><span class="co">#&gt; ========================================</span></span>
+<span id="cb22-10"><a href="#cb22-10" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-11"><a href="#cb22-11" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-12"><a href="#cb22-12" tabindex="-1"></a><span class="co">#&gt; 1. ELBOW METHOD</span></span>
+<span id="cb22-13"><a href="#cb22-13" tabindex="-1"></a><span class="co">#&gt; -------------------</span></span>
+<span id="cb22-14"><a href="#cb22-14" tabindex="-1"></a><span class="co">#&gt; Calculating elbow method...</span></span>
+<span id="cb22-15"><a href="#cb22-15" tabindex="-1"></a><span class="co">#&gt;   K = 2...</span></span>
+<span id="cb22-16"><a href="#cb22-16" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-17"><a href="#cb22-17" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 2 clusters formed in 1 iterations</span></span>
+<span id="cb22-18"><a href="#cb22-18" tabindex="-1"></a><span class="co">#&gt;   K = 3...</span></span>
+<span id="cb22-19"><a href="#cb22-19" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-20"><a href="#cb22-20" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 3 clusters formed in 2 iterations</span></span>
+<span id="cb22-21"><a href="#cb22-21" tabindex="-1"></a><span class="co">#&gt;   K = 4...</span></span>
+<span id="cb22-22"><a href="#cb22-22" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-23"><a href="#cb22-23" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb22-24"><a href="#cb22-24" tabindex="-1"></a><span class="co">#&gt;   K = 5...</span></span>
+<span id="cb22-25"><a href="#cb22-25" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-26"><a href="#cb22-26" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 4 iterations</span></span>
+<span id="cb22-27"><a href="#cb22-27" tabindex="-1"></a><span class="co">#&gt;   K = 6...</span></span>
+<span id="cb22-28"><a href="#cb22-28" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-29"><a href="#cb22-29" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-30"><a href="#cb22-30" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb22-31"><a href="#cb22-31" tabindex="-1"></a><span class="co">#&gt;   K = 7...</span></span>
+<span id="cb22-32"><a href="#cb22-32" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-33"><a href="#cb22-33" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-34"><a href="#cb22-34" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb22-35"><a href="#cb22-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-36"><a href="#cb22-36" tabindex="-1"></a><span class="co">#&gt; K suggested by elbow method: 5</span></span>
+<span id="cb22-37"><a href="#cb22-37" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-38"><a href="#cb22-38" tabindex="-1"></a><span class="co">#&gt; 2. SILHOUETTE METHOD</span></span>
+<span id="cb22-39"><a href="#cb22-39" tabindex="-1"></a><span class="co">#&gt; ---------------------------</span></span>
+<span id="cb22-40"><a href="#cb22-40" tabindex="-1"></a><span class="co">#&gt; Calculating silhouette method...</span></span>
+<span id="cb22-41"><a href="#cb22-41" tabindex="-1"></a><span class="co">#&gt;   K = 2...</span></span>
+<span id="cb22-42"><a href="#cb22-42" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-43"><a href="#cb22-43" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 2 clusters formed in 1 iterations</span></span>
+<span id="cb22-44"><a href="#cb22-44" tabindex="-1"></a><span class="co">#&gt;   K = 3...</span></span>
+<span id="cb22-45"><a href="#cb22-45" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-46"><a href="#cb22-46" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 3 clusters formed in 2 iterations</span></span>
+<span id="cb22-47"><a href="#cb22-47" tabindex="-1"></a><span class="co">#&gt;   K = 4...</span></span>
+<span id="cb22-48"><a href="#cb22-48" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-49"><a href="#cb22-49" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb22-50"><a href="#cb22-50" tabindex="-1"></a><span class="co">#&gt;   K = 5...</span></span>
+<span id="cb22-51"><a href="#cb22-51" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-52"><a href="#cb22-52" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 4 iterations</span></span>
+<span id="cb22-53"><a href="#cb22-53" tabindex="-1"></a><span class="co">#&gt;   K = 6...</span></span>
+<span id="cb22-54"><a href="#cb22-54" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-55"><a href="#cb22-55" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-56"><a href="#cb22-56" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb22-57"><a href="#cb22-57" tabindex="-1"></a><span class="co">#&gt;   K = 7...</span></span>
+<span id="cb22-58"><a href="#cb22-58" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-59"><a href="#cb22-59" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-60"><a href="#cb22-60" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb22-61"><a href="#cb22-61" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-62"><a href="#cb22-62" tabindex="-1"></a><span class="co">#&gt; Suggested K by silhouette method: 5</span></span>
+<span id="cb22-63"><a href="#cb22-63" tabindex="-1"></a><span class="co">#&gt; Silhouette coefficient: 0.451</span></span>
+<span id="cb22-64"><a href="#cb22-64" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb22-65"><a href="#cb22-65" tabindex="-1"></a><span class="co">#&gt; 3. CALINSKI-HARABASZ METHOD (PSEUDO-F)</span></span>
+<span id="cb22-66"><a href="#cb22-66" tabindex="-1"></a><span class="co">#&gt; ----------------------------------------</span></span>
+<span id="cb22-67"><a href="#cb22-67" tabindex="-1"></a><span class="co">#&gt; Calculating Calinski-Harabasz (Pseudo-F)...</span></span>
+<span id="cb22-68"><a href="#cb22-68" tabindex="-1"></a><span class="co">#&gt;   K = 2...</span></span>
+<span id="cb22-69"><a href="#cb22-69" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-70"><a href="#cb22-70" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 2 clusters formed in 1 iterations</span></span>
+<span id="cb22-71"><a href="#cb22-71" tabindex="-1"></a><span class="co">#&gt;   K = 3...</span></span>
+<span id="cb22-72"><a href="#cb22-72" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-73"><a href="#cb22-73" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 3 clusters formed in 2 iterations</span></span>
+<span id="cb22-74"><a href="#cb22-74" tabindex="-1"></a><span class="co">#&gt;   K = 4...</span></span>
+<span id="cb22-75"><a href="#cb22-75" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-76"><a href="#cb22-76" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 4 clusters formed in 3 iterations</span></span>
+<span id="cb22-77"><a href="#cb22-77" tabindex="-1"></a><span class="co">#&gt;   K = 5...</span></span>
+<span id="cb22-78"><a href="#cb22-78" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-79"><a href="#cb22-79" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 4 iterations</span></span>
+<span id="cb22-80"><a href="#cb22-80" tabindex="-1"></a><span class="co">#&gt;   K = 6...</span></span>
+<span id="cb22-81"><a href="#cb22-81" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-82"><a href="#cb22-82" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-83"><a href="#cb22-83" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span>
+<span id="cb22-84"><a href="#cb22-84" tabindex="-1"></a><span class="co">#&gt;   K = 7...</span></span>
+<span id="cb22-85"><a href="#cb22-85" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb22-86"><a href="#cb22-86" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 5 clusters (lambda2/lambda1 = 0.089 &lt; 0.100)</span></span>
+<span id="cb22-87"><a href="#cb22-87" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 5 clusters formed in 5 iterations</span></span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<pre><code>#&gt; 
+#&gt; K suggested by Calinski-Harabasz: 5
+#&gt; Pseudo-F score: 9.258
+#&gt; 
+#&gt; ========================================
+#&gt; SUMMARY OF RECOMMENDATIONS
+#&gt; ========================================
+#&gt; Elbow Method:           K = 5
+#&gt; Silhouette Method:      K = 5
+#&gt; Calinski-Harabasz:      K = 5
+#&gt; 
+#&gt; Consensus (majority vote): K = 5
+#&gt; ========================================
+cat(&quot;Consensus K:&quot;, comparison$consensus_k, &quot;\n&quot;)
+#&gt; Consensus K: 5</code></pre>
+</div>
+</div>
+<div id="mixed-data" class="section level2">
+<h2>Mixed Data</h2>
+<p>The <code>DivisiveClusterer</code> automatically detects the data
+type and uses: - <strong>Fast path</strong>: <code>eigen(cor(X))</code>
+for purely numeric data - <strong>PCAmix</strong>: For mixed data
+(numeric + categorical)</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" tabindex="-1"></a><span class="co"># Mixed data</span></span>
+<span id="cb24-2"><a href="#cb24-2" tabindex="-1"></a>data_mixed <span class="ot">&lt;-</span> data_struct[, <span class="dv">1</span><span class="sc">:</span><span class="dv">6</span>]</span>
+<span id="cb24-3"><a href="#cb24-3" tabindex="-1"></a>data_mixed<span class="sc">$</span>Cat1 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;A&quot;</span>, <span class="st">&quot;B&quot;</span>, <span class="st">&quot;C&quot;</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb24-4"><a href="#cb24-4" tabindex="-1"></a>data_mixed<span class="sc">$</span>Cat2 <span class="ot">&lt;-</span> <span class="fu">factor</span>(<span class="fu">sample</span>(<span class="fu">c</span>(<span class="st">&quot;X&quot;</span>, <span class="st">&quot;Y&quot;</span>), n, <span class="at">replace =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb24-5"><a href="#cb24-5" tabindex="-1"></a></span>
+<span id="cb24-6"><a href="#cb24-6" tabindex="-1"></a><span class="fu">str</span>(data_mixed)</span>
+<span id="cb24-7"><a href="#cb24-7" tabindex="-1"></a><span class="co">#&gt; &#39;data.frame&#39;:    100 obs. of  8 variables:</span></span>
+<span id="cb24-8"><a href="#cb24-8" tabindex="-1"></a><span class="co">#&gt;  $ V1  : num  -0.5605 -0.2302 1.5587 0.0705 0.1293 ...</span></span>
+<span id="cb24-9"><a href="#cb24-9" tabindex="-1"></a><span class="co">#&gt;  $ V2  : num  -0.182 -0.215 1.393 -0.391 0.353 ...</span></span>
+<span id="cb24-10"><a href="#cb24-10" tabindex="-1"></a><span class="co">#&gt;  $ V3  : num  -0.768 -0.812 1.048 0.107 -0.436 ...</span></span>
+<span id="cb24-11"><a href="#cb24-11" tabindex="-1"></a><span class="co">#&gt;  $ V4  : num  -0.71 0.257 -0.247 -0.348 -0.952 ...</span></span>
+<span id="cb24-12"><a href="#cb24-12" tabindex="-1"></a><span class="co">#&gt;  $ V5  : num  -0.50046 -0.00425 0.08223 0.09769 -0.74073 ...</span></span>
+<span id="cb24-13"><a href="#cb24-13" tabindex="-1"></a><span class="co">#&gt;  $ V6  : num  -1.0389 -0.1454 -0.0675 0.4526 -0.2922 ...</span></span>
+<span id="cb24-14"><a href="#cb24-14" tabindex="-1"></a><span class="co">#&gt;  $ Cat1: Factor w/ 3 levels &quot;A&quot;,&quot;B&quot;,&quot;C&quot;: 3 3 2 1 1 3 2 3 2 1 ...</span></span>
+<span id="cb24-15"><a href="#cb24-15" tabindex="-1"></a><span class="co">#&gt;  $ Cat2: Factor w/ 2 levels &quot;X&quot;,&quot;Y&quot;: 2 2 1 1 1 1 1 2 1 1 ...</span></span>
+<span id="cb24-16"><a href="#cb24-16" tabindex="-1"></a></span>
+<span id="cb24-17"><a href="#cb24-17" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">requireNamespace</span>(<span class="st">&quot;PCAmixdata&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb24-18"><a href="#cb24-18" tabindex="-1"></a>  clusterer_mixed <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(</span>
+<span id="cb24-19"><a href="#cb24-19" tabindex="-1"></a>    <span class="at">data =</span> data_mixed,</span>
+<span id="cb24-20"><a href="#cb24-20" tabindex="-1"></a>    <span class="at">n_clusters =</span> <span class="dv">3</span></span>
+<span id="cb24-21"><a href="#cb24-21" tabindex="-1"></a>  )</span>
+<span id="cb24-22"><a href="#cb24-22" tabindex="-1"></a>  clusterer_mixed<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb24-23"><a href="#cb24-23" tabindex="-1"></a>  clusterer_mixed<span class="sc">$</span><span class="fu">print</span>()</span>
+<span id="cb24-24"><a href="#cb24-24" tabindex="-1"></a>}</span>
+<span id="cb24-25"><a href="#cb24-25" tabindex="-1"></a><span class="co">#&gt; Data mode: MIXED (PCAmix path for categorical variables)</span></span>
+<span id="cb24-26"><a href="#cb24-26" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 3 clusters formed in 2 iterations</span></span>
+<span id="cb24-27"><a href="#cb24-27" tabindex="-1"></a><span class="co">#&gt; === Divisive Clusterer (VARCLUS-style) ===</span></span>
+<span id="cb24-28"><a href="#cb24-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb24-29"><a href="#cb24-29" tabindex="-1"></a><span class="co">#&gt; Number of variables: 8</span></span>
+<span id="cb24-30"><a href="#cb24-30" tabindex="-1"></a><span class="co">#&gt; Number of clusters: 3</span></span>
+<span id="cb24-31"><a href="#cb24-31" tabindex="-1"></a><span class="co">#&gt; Standardization: Yes</span></span>
+<span id="cb24-32"><a href="#cb24-32" tabindex="-1"></a><span class="co">#&gt; Fitted: Yes</span></span>
+<span id="cb24-33"><a href="#cb24-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb24-34"><a href="#cb24-34" tabindex="-1"></a><span class="co">#&gt; Cluster sizes:</span></span>
+<span id="cb24-35"><a href="#cb24-35" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb24-36"><a href="#cb24-36" tabindex="-1"></a><span class="co">#&gt; 1 2 3 </span></span>
+<span id="cb24-37"><a href="#cb24-37" tabindex="-1"></a><span class="co">#&gt; 4 3 1 </span></span>
+<span id="cb24-38"><a href="#cb24-38" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb24-39"><a href="#cb24-39" tabindex="-1"></a><span class="co">#&gt; Split history:</span></span>
+<span id="cb24-40"><a href="#cb24-40" tabindex="-1"></a><span class="co">#&gt;   Iteration 1: Split cluster 1 (lambda1=2.953, lambda2=2.649, ratio=0.897) -&gt; 2 clusters</span></span>
+<span id="cb24-41"><a href="#cb24-41" tabindex="-1"></a><span class="co">#&gt;   Iteration 2: Split cluster 2 (lambda1=2.724, lambda2=1.000, ratio=0.367) -&gt; 3 clusters</span></span>
+<span id="cb24-42"><a href="#cb24-42" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb24-43"><a href="#cb24-43" tabindex="-1"></a><span class="co">#&gt; Global homogeneity: 0.815</span></span></code></pre></div>
+</div>
+<div id="comparison-with-kmeansclusterer" class="section level2">
+<h2>Comparison with KMeansClusterer</h2>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" tabindex="-1"></a><span class="co"># Same data, same parameters (use numeric columns only)</span></span>
+<span id="cb25-2"><a href="#cb25-2" tabindex="-1"></a><span class="fu">data</span>(mtcars)</span>
+<span id="cb25-3"><a href="#cb25-3" tabindex="-1"></a>data_test <span class="ot">&lt;-</span> mtcars[, <span class="fu">c</span>(<span class="st">&quot;mpg&quot;</span>, <span class="st">&quot;cyl&quot;</span>, <span class="st">&quot;disp&quot;</span>, <span class="st">&quot;hp&quot;</span>, <span class="st">&quot;wt&quot;</span>, <span class="st">&quot;qsec&quot;</span>)]</span>
+<span id="cb25-4"><a href="#cb25-4" tabindex="-1"></a></span>
+<span id="cb25-5"><a href="#cb25-5" tabindex="-1"></a><span class="co"># DivisiveClusterer</span></span>
+<span id="cb25-6"><a href="#cb25-6" tabindex="-1"></a>div_clust <span class="ot">&lt;-</span> DivisiveClusterer<span class="sc">$</span><span class="fu">new</span>(<span class="at">data =</span> data_test, <span class="at">n_clusters =</span> <span class="dv">3</span>)</span>
+<span id="cb25-7"><a href="#cb25-7" tabindex="-1"></a>div_clust<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb25-8"><a href="#cb25-8" tabindex="-1"></a><span class="co">#&gt; Data mode: NUMERIC (fast correlation path)</span></span>
+<span id="cb25-9"><a href="#cb25-9" tabindex="-1"></a><span class="co">#&gt; Eigenvalue ratio criterion: Stopping at 2 clusters (lambda2/lambda1 = 0.062 &lt; 0.100)</span></span>
+<span id="cb25-10"><a href="#cb25-10" tabindex="-1"></a><span class="co">#&gt; Divisive clustering completed: 2 clusters formed in 2 iterations</span></span>
+<span id="cb25-11"><a href="#cb25-11" tabindex="-1"></a></span>
+<span id="cb25-12"><a href="#cb25-12" tabindex="-1"></a><span class="co"># KMeansClusterer</span></span>
+<span id="cb25-13"><a href="#cb25-13" tabindex="-1"></a>km_clust <span class="ot">&lt;-</span> KMeansClusterer<span class="sc">$</span><span class="fu">new</span>(<span class="at">data =</span> data_test, <span class="at">n_clusters =</span> <span class="dv">3</span>, <span class="at">seed =</span> <span class="dv">42</span>)</span>
+<span id="cb25-14"><a href="#cb25-14" tabindex="-1"></a>km_clust<span class="sc">$</span><span class="fu">fit</span>()</span>
+<span id="cb25-15"><a href="#cb25-15" tabindex="-1"></a></span>
+<span id="cb25-16"><a href="#cb25-16" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;=== Comparison ===</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb25-17"><a href="#cb25-17" tabindex="-1"></a><span class="co">#&gt; === Comparison ===</span></span>
+<span id="cb25-18"><a href="#cb25-18" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;DivisiveClusterer - Homogeneity: %.4f</span><span class="sc">\n</span><span class="st">&quot;</span>, div_clust<span class="sc">$</span><span class="fu">get_homogeneity</span>()))</span>
+<span id="cb25-19"><a href="#cb25-19" tabindex="-1"></a><span class="co">#&gt; DivisiveClusterer - Homogeneity: 0.8798</span></span>
+<span id="cb25-20"><a href="#cb25-20" tabindex="-1"></a><span class="fu">cat</span>(<span class="fu">sprintf</span>(<span class="st">&quot;KMeansClusterer   - Homogeneity: %.4f</span><span class="sc">\n</span><span class="st">&quot;</span>, km_clust<span class="sc">$</span><span class="fu">get_homogeneity</span>()))</span>
+<span id="cb25-21"><a href="#cb25-21" tabindex="-1"></a><span class="co">#&gt; KMeansClusterer   - Homogeneity: 0.9284</span></span>
+<span id="cb25-22"><a href="#cb25-22" tabindex="-1"></a></span>
+<span id="cb25-23"><a href="#cb25-23" tabindex="-1"></a><span class="co"># Compare assignments</span></span>
+<span id="cb25-24"><a href="#cb25-24" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">DivisiveClusterer assignments:</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb25-25"><a href="#cb25-25" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb25-26"><a href="#cb25-26" tabindex="-1"></a><span class="co">#&gt; DivisiveClusterer assignments:</span></span>
+<span id="cb25-27"><a href="#cb25-27" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(div_clust<span class="sc">$</span>clusters))</span>
+<span id="cb25-28"><a href="#cb25-28" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb25-29"><a href="#cb25-29" tabindex="-1"></a><span class="co">#&gt; 1 2 </span></span>
+<span id="cb25-30"><a href="#cb25-30" tabindex="-1"></a><span class="co">#&gt; 4 2</span></span>
+<span id="cb25-31"><a href="#cb25-31" tabindex="-1"></a></span>
+<span id="cb25-32"><a href="#cb25-32" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;</span><span class="sc">\n</span><span class="st">KMeansClusterer assignments:</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb25-33"><a href="#cb25-33" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb25-34"><a href="#cb25-34" tabindex="-1"></a><span class="co">#&gt; KMeansClusterer assignments:</span></span>
+<span id="cb25-35"><a href="#cb25-35" tabindex="-1"></a><span class="fu">print</span>(<span class="fu">table</span>(km_clust<span class="sc">$</span>clusters))</span>
+<span id="cb25-36"><a href="#cb25-36" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb25-37"><a href="#cb25-37" tabindex="-1"></a><span class="co">#&gt; 1 2 3 </span></span>
+<span id="cb25-38"><a href="#cb25-38" tabindex="-1"></a><span class="co">#&gt; 4 1 1</span></span></code></pre></div>
+<div id="side-by-side-visualization" class="section level3">
+<h3>Side-by-Side Visualization</h3>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">2</span>))</span>
+<span id="cb26-2"><a href="#cb26-2" tabindex="-1"></a><span class="fu">plot_clustering_2d</span>(div_clust, <span class="at">main =</span> <span class="st">&quot;DivisiveClusterer&quot;</span>)</span>
+<span id="cb26-3"><a href="#cb26-3" tabindex="-1"></a><span class="fu">plot_clustering_2d</span>(km_clust, <span class="at">main =</span> <span class="st">&quot;KMeansClusterer&quot;</span>)</span></code></pre></div>
+<p><img role="img" src="data:image/png;base64,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" /><!-- --></p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" tabindex="-1"></a><span class="fu">par</span>(<span class="at">mfrow =</span> <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>))</span></code></pre></div>
+</div>
+</div>
+<div id="recommended-use-cases" class="section level2">
+<h2>Recommended Use Cases</h2>
+<div id="when-to-use-divisiveclusterer" class="section level3">
+<h3>When to Use DivisiveClusterer?</h3>
+<ol style="list-style-type: decimal">
+<li><strong>Absolute reproducibility</strong>: 100% deterministic
+results</li>
+<li><strong>Hierarchical interpretation</strong>: Understanding how
+groups form</li>
+<li><strong>Automatic stopping</strong>: Let the algorithm determine
+optimal K</li>
+<li><strong>Large datasets</strong>: The fast path is very
+efficient</li>
+</ol>
+</div>
+<div id="when-to-prefer-kmeansclusterer" class="section level3">
+<h3>When to Prefer KMeansClusterer?</h3>
+<ol style="list-style-type: decimal">
+<li><strong>Fixed and known K</strong>: Direct optimization for K
+clusters</li>
+<li><strong>Initialization flexibility</strong>: Testing multiple
+starts</li>
+<li><strong>Highly heterogeneous data</strong>: Better convergence to
+global optimum</li>
+</ol>
+</div>
+</div>
+<div id="export-and-integration" class="section level2">
+<h2>Export and Integration</h2>
+<div id="retrieving-assignments" class="section level3">
+<h3>Retrieving Assignments</h3>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" tabindex="-1"></a>assignments <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">get_cluster_assignments</span>()</span>
+<span id="cb28-2"><a href="#cb28-2" tabindex="-1"></a><span class="fu">head</span>(assignments)</span>
+<span id="cb28-3"><a href="#cb28-3" tabindex="-1"></a><span class="co">#&gt;   variable cluster homogeneity</span></span>
+<span id="cb28-4"><a href="#cb28-4" tabindex="-1"></a><span class="co">#&gt; 1       V1       1    0.714160</span></span>
+<span id="cb28-5"><a href="#cb28-5" tabindex="-1"></a><span class="co">#&gt; 2       V2       1    0.714160</span></span>
+<span id="cb28-6"><a href="#cb28-6" tabindex="-1"></a><span class="co">#&gt; 3       V3       1    0.714160</span></span>
+<span id="cb28-7"><a href="#cb28-7" tabindex="-1"></a><span class="co">#&gt; 4       V4       2    0.899325</span></span>
+<span id="cb28-8"><a href="#cb28-8" tabindex="-1"></a><span class="co">#&gt; 5       V5       2    0.899325</span></span>
+<span id="cb28-9"><a href="#cb28-9" tabindex="-1"></a><span class="co">#&gt; 6       V6       2    0.899325</span></span></code></pre></div>
+</div>
+<div id="retrieving-the-hierarchical-structure" class="section level3">
+<h3>Retrieving the Hierarchical Structure</h3>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" tabindex="-1"></a>tree <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">get_hierarchy_tree</span>()</span>
+<span id="cb29-2"><a href="#cb29-2" tabindex="-1"></a><span class="fu">str</span>(tree, <span class="at">max.level =</span> <span class="dv">2</span>)</span>
+<span id="cb29-3"><a href="#cb29-3" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb29-4"><a href="#cb29-4" tabindex="-1"></a><span class="co">#&gt;  $ n_clusters    : num 4</span></span>
+<span id="cb29-5"><a href="#cb29-5" tabindex="-1"></a><span class="co">#&gt;  $ n_iterations  : int 3</span></span>
+<span id="cb29-6"><a href="#cb29-6" tabindex="-1"></a><span class="co">#&gt;  $ splits        :List of 3</span></span>
+<span id="cb29-7"><a href="#cb29-7" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb29-8"><a href="#cb29-8" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb29-9"><a href="#cb29-9" tabindex="-1"></a><span class="co">#&gt;   ..$ :List of 9</span></span>
+<span id="cb29-10"><a href="#cb29-10" tabindex="-1"></a><span class="co">#&gt;  $ final_clusters:List of 4</span></span>
+<span id="cb29-11"><a href="#cb29-11" tabindex="-1"></a><span class="co">#&gt;   ..$ 1: int 4</span></span>
+<span id="cb29-12"><a href="#cb29-12" tabindex="-1"></a><span class="co">#&gt;   ..$ 2: int 3</span></span>
+<span id="cb29-13"><a href="#cb29-13" tabindex="-1"></a><span class="co">#&gt;   ..$ 3: int 3</span></span>
+<span id="cb29-14"><a href="#cb29-14" tabindex="-1"></a><span class="co">#&gt;   ..$ 4: int 2</span></span></code></pre></div>
+</div>
+<div id="cluster-centers" class="section level3">
+<h3>Cluster Centers</h3>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" tabindex="-1"></a>centers <span class="ot">&lt;-</span> clusterer<span class="sc">$</span><span class="fu">get_centers</span>()</span>
+<span id="cb30-2"><a href="#cb30-2" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Number of centers:&quot;</span>, <span class="fu">length</span>(centers), <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb30-3"><a href="#cb30-3" tabindex="-1"></a><span class="co">#&gt; Number of centers: 4</span></span>
+<span id="cb30-4"><a href="#cb30-4" tabindex="-1"></a><span class="fu">cat</span>(<span class="st">&quot;Length of first center:&quot;</span>, <span class="fu">length</span>(centers[[<span class="dv">1</span>]]), <span class="st">&quot;observations</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb30-5"><a href="#cb30-5" tabindex="-1"></a><span class="co">#&gt; Length of first center: 100 observations</span></span></code></pre></div>
+</div>
+</div>
+<div id="advanced-parameters---summary" class="section level2">
+<h2>Advanced Parameters - Summary</h2>
+<table style="width:100%;">
+<colgroup>
+<col width="33%" />
+<col width="27%" />
+<col width="39%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th>Parameter</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>n_clusters</code></td>
+<td>-</td>
+<td>Maximum number of clusters</td>
+</tr>
+<tr class="even">
+<td><code>standardize</code></td>
+<td><code>TRUE</code></td>
+<td>Standardize the data</td>
+</tr>
+<tr class="odd">
+<td><code>min_cluster_size</code></td>
+<td><code>3</code></td>
+<td>Minimum size to split</td>
+</tr>
+<tr class="even">
+<td><code>rotation_method</code></td>
+<td><code>&quot;varimax&quot;</code></td>
+<td><code>&quot;varimax&quot;</code>, <code>&quot;promax&quot;</code>,
+<code>&quot;none&quot;</code></td>
+</tr>
+<tr class="odd">
+<td><code>split_criterion</code></td>
+<td><code>&quot;eigenvalue2&quot;</code></td>
+<td><code>&quot;eigenvalue2&quot;</code> or <code>&quot;homogeneity&quot;</code></td>
+</tr>
+<tr class="even">
+<td><code>stop_at_kaiser</code></td>
+<td><code>FALSE</code></td>
+<td>Stop if λ₂ &lt; 1</td>
+</tr>
+<tr class="odd">
+<td><code>min_eigenvalue_ratio</code></td>
+<td><code>0.1</code></td>
+<td>Minimum λ₂/λ₁ ratio</td>
+</tr>
+<tr class="even">
+<td><code>promax_m</code></td>
+<td><code>4</code></td>
+<td>Power for Promax</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>The <code>DivisiveClusterer</code> offers a complementary approach to
+the <code>KMeansClusterer</code>:</p>
+<ul>
+<li><strong>Determinism</strong>: Ideal for reproducibility and
+reports</li>
+<li><strong>Interpretability</strong>: The split history tells a
+story</li>
+<li><strong>Flexibility</strong>: Multiple stopping criteria for context
+adaptation</li>
+<li><strong>Performance</strong>: Hybrid path optimized by data
+type</li>
+</ul>
+<p>To explore your data, start with <code>DivisiveClusterer</code> with
+<code>stop_at_kaiser = TRUE</code> to discover the natural structure,
+then refine with <code>KMeansClusterer</code> if needed.</p>
+</div>
+<div id="references" class="section level2">
+<h2>References</h2>
+<ul>
+<li>Sarle, W. S. (1990). The VARCLUS Procedure. <em>SAS/STAT User’s
+Guide</em>, Version 6, Fourth Edition.</li>
+<li>Chavent, M., et al. (2012). ClustOfVar: An R Package for the
+Clustering of Variables.</li>
+</ul>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb31-1"><a href="#cb31-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span>
+<span id="cb31-2"><a href="#cb31-2" tabindex="-1"></a><span class="co">#&gt; R version 4.4.3 (2025-02-28 ucrt)</span></span>
+<span id="cb31-3"><a href="#cb31-3" tabindex="-1"></a><span class="co">#&gt; Platform: x86_64-w64-mingw32/x64</span></span>
+<span id="cb31-4"><a href="#cb31-4" tabindex="-1"></a><span class="co">#&gt; Running under: Windows 11 x64 (build 26200)</span></span>
+<span id="cb31-5"><a href="#cb31-5" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-6"><a href="#cb31-6" tabindex="-1"></a><span class="co">#&gt; Matrix products: default</span></span>
+<span id="cb31-7"><a href="#cb31-7" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-8"><a href="#cb31-8" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-9"><a href="#cb31-9" tabindex="-1"></a><span class="co">#&gt; locale:</span></span>
+<span id="cb31-10"><a href="#cb31-10" tabindex="-1"></a><span class="co">#&gt; [1] LC_COLLATE=French_France.utf8  LC_CTYPE=French_France.utf8   </span></span>
+<span id="cb31-11"><a href="#cb31-11" tabindex="-1"></a><span class="co">#&gt; [3] LC_MONETARY=French_France.utf8 LC_NUMERIC=C                  </span></span>
+<span id="cb31-12"><a href="#cb31-12" tabindex="-1"></a><span class="co">#&gt; [5] LC_TIME=French_France.utf8    </span></span>
+<span id="cb31-13"><a href="#cb31-13" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-14"><a href="#cb31-14" tabindex="-1"></a><span class="co">#&gt; time zone: Europe/Paris</span></span>
+<span id="cb31-15"><a href="#cb31-15" tabindex="-1"></a><span class="co">#&gt; tzcode source: internal</span></span>
+<span id="cb31-16"><a href="#cb31-16" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-17"><a href="#cb31-17" tabindex="-1"></a><span class="co">#&gt; attached base packages:</span></span>
+<span id="cb31-18"><a href="#cb31-18" tabindex="-1"></a><span class="co">#&gt; [1] stats     graphics  grDevices utils     datasets  methods   base     </span></span>
+<span id="cb31-19"><a href="#cb31-19" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-20"><a href="#cb31-20" tabindex="-1"></a><span class="co">#&gt; other attached packages:</span></span>
+<span id="cb31-21"><a href="#cb31-21" tabindex="-1"></a><span class="co">#&gt; [1] M2RClust_0.0.0.9000</span></span>
+<span id="cb31-22"><a href="#cb31-22" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb31-23"><a href="#cb31-23" tabindex="-1"></a><span class="co">#&gt; loaded via a namespace (and not attached):</span></span>
+<span id="cb31-24"><a href="#cb31-24" tabindex="-1"></a><span class="co">#&gt;  [1] igraph_2.2.1      digest_0.6.39     R6_2.6.1          fastmap_1.2.0    </span></span>
+<span id="cb31-25"><a href="#cb31-25" tabindex="-1"></a><span class="co">#&gt;  [5] xfun_0.54         PCAmixdata_3.1    magrittr_2.0.3    cachem_1.1.0     </span></span>
+<span id="cb31-26"><a href="#cb31-26" tabindex="-1"></a><span class="co">#&gt;  [9] knitr_1.50        pkgconfig_2.0.3   htmltools_0.5.8.1 rmarkdown_2.30   </span></span>
+<span id="cb31-27"><a href="#cb31-27" tabindex="-1"></a><span class="co">#&gt; [13] lifecycle_1.0.4   cli_3.6.5         sass_0.4.10       jquerylib_0.1.4  </span></span>
+<span id="cb31-28"><a href="#cb31-28" tabindex="-1"></a><span class="co">#&gt; [17] compiler_4.4.3    rstudioapi_0.17.1 tools_4.4.3       cluster_2.1.8    </span></span>
+<span id="cb31-29"><a href="#cb31-29" tabindex="-1"></a><span class="co">#&gt; [21] evaluate_1.0.5    bslib_0.9.0       yaml_2.3.11       rlang_1.1.6      </span></span>
+<span id="cb31-30"><a href="#cb31-30" tabindex="-1"></a><span class="co">#&gt; [25] jsonlite_2.0.0</span></span></code></pre></div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

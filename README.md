@@ -1,156 +1,276 @@
-# M2RClust 📊
+# 📊 M2RClust - Advanced Variable Clustering in R
 
-**Package R de clustering de variables avec interface Shiny interactive**
+<div align="center">
 
-[![R Package](https://img.shields.io/badge/R-Package-blue.svg)](https://www.r-project.org/)
-[![Shiny](https://img.shields.io/badge/Shiny-App-green.svg)](https://shiny.rstudio.com/)
+![R Version](https://img.shields.io/badge/R-%E2%89%A54.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Status](https://img.shields.io/badge/version-0.0.0.9000-orange)
 
-## 🎯 Description
+*A comprehensive R package for clustering variables using hierarchical and partitioning methods, complete with a Shiny interface.*
 
-M2RClust est un package R dédié au **clustering de variables** (et non d'observations). Il permet de regrouper des variables selon leur structure de corrélation, avec support des données mixtes (numériques et catégorielles).
+[Installation](#-installation) • [Features](#-features) • [Algorithms](#-algorithms) • [Shiny App](#-interactive-shiny-app) • [Documentation](#-documentation)
 
-## ✨ Fonctionnalités
+</div>
 
-### Algorithmes de Clustering
+---
 
-Le package propose **3 approches complémentaires** :
+## 📖 Table of Contents
 
-| Algorithme | Objet clusterisé | Approche | Cas d'usage |
-|------------|------------------|----------|-------------|
-| `KMeansClusterer` | **Variables** | Partitionnement itératif | Regrouper des variables corrélées |
-| `DivisiveClusterer` | **Variables** | Divisif hiérarchique (PDDP) | Hiérarchie interprétable de variables |
-| `ModalitiesDiceClusterer` | **Modalités** | Hiérarchique (Dice/Cramér) | Regrouper des niveaux de facteurs |
+- [📊 M2RClust - Advanced Variable Clustering in R](#-m2rclust---advanced-variable-clustering-in-r)
+  - [📖 Table of Contents](#-table-of-contents)
+  - [🎯 Overview](#-overview)
+  - [✨ Features](#-features)
+    - [🔧 Core Functionality](#-core-functionality)
+    - [📊 Visualization Tools](#-visualization-tools)
+  - [📦 Installation](#-installation)
+    - [Dependencies](#dependencies)
+  - [🧮 Algorithms](#-algorithms)
+    - [1️⃣ K-means Variable Clustering (`KMeansClusterer`)](#1️⃣-k-means-variable-clustering-kmeansclusterer)
+      - [📌 Key Characteristics](#-key-characteristics)
+      - [📝 Basic Example](#-basic-example)
+    - [2️⃣ Modalities Clustering (`ModalitiesDiceClusterer`)](#2️⃣-modalities-clustering-modalitiesdiceclusterer)
+      - [📌 Key Characteristics](#-key-characteristics-1)
+      - [📝 Basic Example](#-basic-example-1)
+    - [3️⃣ Divisive Clustering (`DivisiveClusterer`)](#3️⃣-divisive-clustering-divisiveclusterer)
+      - [📌 Key Characteristics](#-key-characteristics-2)
+      - [📝 Basic Example](#-basic-example-2)
+  - [🎮 Interactive Shiny App](#-interactive-shiny-app)
+    - [Launching the App](#launching-the-app)
+    - [App Features](#app-features)
+  - [📚 Documentation](#-documentation)
+  - [🛠️ Development](#️-development)
+    - [Project Structure](#project-structure)
+  - [👥 Authors](#-authors)
+  - [📄 License](#-license)
 
-> ⚠️ **Note importante** : `ModalitiesDiceClusterer` cluster les **modalités** (niveaux de variables catégorielles), pas les variables elles-mêmes.
+---
 
-- **Support des données mixtes** : Variables numériques et catégorielles (via PCAmix)
+## 🎯 Overview
 
-- **Méthodes de sélection du nombre optimal de clusters** :
-  - Méthode du coude (Elbow)
-  - Silhouette
-  - Calinski-Harabasz
+**M2RClust** is an R package developed for the **Clustering of Variables**. Unlike traditional clustering which groups observations, this package focuses on grouping variables to identify redundant information, reduce dimensionality, or explore relationships between features.
 
-- **Visualisations riches** :
-  - Cercle des corrélations (PCA)
-  - Dendrogramme
-  - Heatmap de corrélation
-  - Graphe de réseau
-  - Contributions des variables
+It supports:
+- ✅ **Quantitative variables** (continuous data)
+- ✅ **Qualitative variables** (categorical data)
+- ✅ **Mixed datasets** (quantitative + qualitative)
 
-- **Application Shiny interactive** pour une utilisation sans code
+This project was developed as part of the **Master 2 SISE** (Statistique et Informatique pour la Science des Données) at **Université Lumière Lyon 2**.
+
+---
+
+## ✨ Features
+
+### 🔧 Core Functionality
+
+| Feature | KMeansClusterer | ModalitiesDiceClusterer | DivisiveClusterer |
+|---------|:---------------:|:-----------------------:|:-----------------:|
+| **Method** | Partitioning (K-means style) | Hierarchical (Agglomerative) | Hierarchical (Divisive) |
+| **Metric** | Homogeneity (Latent Component) | Dice / Cramér's V | PCA/PCAmix Eigenvalues |
+| **Visualization** | 2D Projections, Elbow | Dendrograms, MCA | Dendrograms, Scree Plots |
+
+### 📊 Visualization Tools
+
+- 🌳 **Dendrograms** for hierarchical structures
+- 📉 **Elbow & Scree plots** for optimal K selection
+- 🗺️ **2D Projections** (PCA/MCA based)
+- 🎨 **Correlation Heatmaps**
+- 📈 **Contribution plots** to see key variables per cluster
+
+---
 
 ## 📦 Installation
 
-### Depuis GitHub
+You can install the development version of M2RClust from GitHub:
 
 ```r
-# Installer devtools si nécessaire
-install.packages("devtools")
+# Install devtools if not already installed
+if (!require("devtools")) install.packages("devtools")
 
-# Installer M2RClust
+# Install M2RClust
 devtools::install_github("OlivierBOROT/M2_R_Clustering_Shiny_App")
+
+# using the remotes package
+if (!require("remotes")) install.packages("remotes")
+
+# Install M2RClust
+remotes::install_github("OlivierBOROT/M2_R_Clustering_Shiny_App")
 ```
 
-### Depuis un fichier source
+### Dependencies
 
+The package relies on several robust R packages:
+- **Core**: `R6`, `FactoMineR`, `PCAmixdata`, `cluster`
+- **Interface**: `shiny`, `DT`, `bslib`, `bsicons`
+- **Visualization**: `ggplot2`, `plotly`, `igraph`
+
+---
+
+## 🧮 Algorithms
+
+### 1️⃣ K-means Variable Clustering (`KMeansClusterer`)
+
+**Partitioning algorithm** that maximizes within-cluster homogeneity.
+
+#### 📌 Key Characteristics
+- **Homogeneity Measure**: Proportion of variance explained by the cluster's first latent component.
+- **Data Types**: Handles numeric, factor, and mixed data.
+- **Initialization**: Supports "homogeneity++", "correlation", and "random".
+
+#### 📝 Basic Example
 ```r
-install.packages("chemin/vers/M2RClust_0.0.0.9000.tar.gz", repos = NULL, type = "source")
+library(M2RClust)
+
+# Initialize and fit
+km <- KMeansClusterer$new(data = my_data, n_clusters = 3)
+km$fit()
+
+# Results
+km$print()
+km$plot_clustering_2d()
 ```
 
-## 🚀 Utilisation rapide
+### 2️⃣ Modalities Clustering (`ModalitiesDiceClusterer`)
 
-### Lancer l'application Shiny
+**Hierarchical clustering of modalities** using Dice or Cramér's V distance.
 
+#### 📌 Key Characteristics
+- **Focus**: Clusters *modalities* (categories) rather than variables.
+- **Distance**: Dice coefficient (default) on disjunctive tables.
+- **Automatic Discretization**: Can automatically bin numeric variables.
+
+#### 📝 Basic Example
+```r
+# Initialize and fit
+mod_clust <- ModalitiesDiceClusterer$new(n_groups = 4, auto_discretize = TRUE)
+mod_clust$fit(my_data)
+
+# Visualize
+mod_clust$plot_dendrogram()
+```
+
+### 3️⃣ Divisive Clustering (`DivisiveClusterer`)
+
+**Top-down hierarchical clustering** (VARCLUS-style) with a hybrid architecture.
+
+#### 📌 Key Characteristics
+- **Hybrid Engine**: Uses fast `eigen(cor(X))` for numeric data and `PCAmix` for mixed data.
+- **Splitting Criterion**: Splits the most heterogeneous cluster based on the second eigenvalue.
+- **Rotation**: Applies Varimax rotation to refine splits.
+
+#### 📝 Basic Example
+```r
+# Initialize and fit
+div <- DivisiveClusterer$new(data = my_data, n_clusters = 5)
+div$fit()
+
+# Visualize
+div$plot_dendrogram()
+```
+
+---
+
+## 🎮 Interactive Shiny App
+
+The package includes a comprehensive **Shiny Application** to perform analyses without writing code.
+
+### Launching the App
 ```r
 library(M2RClust)
 run_app()
 ```
 
-#### 🖥️ Fonctionnalités de l'application Shiny
+### App Features
+- 📁 **Data Import**: Upload CSV/Excel files easily.
+- ⚙️ **Configuration**: Select active/illustrative variables.
+- 🚀 **Run Algorithms**: Choose between K-means, Modalities, or Divisive clustering.
+- 📊 **Interactive Plots**: Zoom, pan, and export visualizations.
+- 📑 **Reports**: View detailed summaries and statistics.
 
-L'application Shiny offre une interface interactive complète :
-
-- **Import des données** : Chargement de fichiers CSV avec configuration flexible (séparateur, décimale, en-têtes)
-- **Sélection des variables** : Interface intuitive pour choisir les variables à inclure dans l'analyse
-- **Configuration des algorithmes** :
-  - KMeans : nombre de clusters, standardisation, seed
-  - PDDP (Divisif) : critères d'arrêt (ratio eigenvalue, Kaiser), nombre max de clusters
-  - Modalités (Dice) : mesure de dissimilarité (Dice/Cramér), méthode de liaison, discrétisation automatique
-- **Visualisations interactives** : Dendrogrammes, cercles de corrélation, heatmaps, graphes de réseau
-- **Export des résultats** : Téléchargement des clusters et graphiques
-- **Interface bilingue** : Français / Anglais
-
-### Clustering de Variables (KMeansClusterer / DivisiveClusterer)
-
-```r
-library(M2RClust)
-
-# Charger des données
-data(iris)
-df <- iris[, 1:4]
-
-# Créer et ajuster un clusterer
-clusterer <- KMeansClusterer$new(
-  data = df,
-  n_clusters = 2,
-  standardize = TRUE
-)
-clusterer$fit()
-
-# Voir les résultats
-clusterer$summary()
-
-# Visualiser
-plot_clustering_2d(clusterer)
-```
-
-### Clustering de Modalités (ModalitiesDiceClusterer)
-
-```r
-library(M2RClust)
-
-# Données catégorielles (ou mixtes avec auto_discretize = TRUE)
-df <- data.frame(
-  couleur = factor(c("rouge", "bleu", "rouge", "vert", "bleu")),
-  taille = factor(c("petit", "grand", "moyen", "petit", "grand")),
-  prix = c(10, 25, 15, 8, 30)  # sera discrétisé automatiquement
-)
-
-# Créer le clusterer de modalités
-clusterer <- ModalitiesDiceClusterer$new(
-  n_groups = 3,
-  dissimilarity = "dice",
-  auto_discretize = TRUE
-)
-
-# Ajuster aux données
-clusterer$fit(df)
-
-# Voir les groupes de modalités
-clusterer$get_cluster_table()
-
-# Visualiser en MCA
-clusterer$plot_clusters()
-```
+---
 
 ## 📚 Documentation
 
-Des vignettes détaillées sont disponibles :
+To view the help for specific classes or functions:
 
-- `vignette("kmeans-clusterer")` - Guide du KMeansClusterer
-- `vignette("divisive-clusterer")` - Guide du DivisiveClusterer
-- `vignette("modalities-clusterer")` - Guide du ModalitiesDiceClusterer
+```r
+?KMeansClusterer
+?ModalitiesDiceClusterer
+?DivisiveClusterer
+```
+you have also access to vignettes to help you get started:
 
-## 👥 Contributeurs
+```r
+browseVignettes("M2RClust")
+```
 
-Projet développé dans le cadre du cours de Programmation R (Master 2 SISE), Université Lumière Lyon 2.
+---
 
-| Contributeur | Contact |
-|--------------|---------|
-| **Olivier BOROT** | olivier.dominique.borot@gmail.com |
-| **Perrine IBOUROI** | perrine.ibouroi@hotmail.fr |
-| **Léo-Paul KNOEPFFLER** | l.knoepffler@free.fr |
+## 🛠️ Development
 
-## 📄 Licence
+### Project Structure
+```
+M2_R_Clustering_Shiny_App/
+├── DESCRIPTION                 # Package metadata
+├── NAMESPACE                   # Exported functions
+├── R/                          # Core R6 Classes & Functions
+│   ├── 00_utils.R              # Utility functions
+│   ├── 01_base_clusterer.R     # Abstract base class
+│   ├── 02_kmeans_clusterer.R   # K-means variable clustering
+│   ├── 03_mca_hclust_cluster.R # Modalities clustering
+│   ├── 04_PDDP_clusterer.R     # Divisive clustering
+│   ├── 05_cluster_validator.R  # Validation metrics
+│   ├── 06_visualization.R      # Plotting functions
+│   └── run_app.R               # App launcher
+├── inst/
+│   └── shinyR/                 # Shiny Application
+│       ├── app.R
+│       ├── global.R
+│       ├── server.R
+│       ├── ui.R
+│       ├── server/             # Server modules
+│       │   ├── cluster_server.R
+│       │   ├── home_server.R
+│       │   └── upload_server.R
+│       ├── ui/                 # UI modules
+│       │   ├── cluster.R
+│       │   ├── home.R
+│       │   └── upload.R
+│       └── texts/              # Content & Translations
+│           ├── dictionnary.csv
+│           └── markdowns/
+├── man/                        # Documentation (Rd files)
+│   ├── BaseClusterer.Rd
+│   ├── KMeansClusterer.Rd
+│   ├── ModalitiesDiceClusterer-class.Rd
+│   ├── DivisiveClusterer.Rd
+│   └── ... (and 20+ other function docs)
+├── tests/                      # Unit Tests
+│   ├── testthat.R
+│   └── testthat/
+│       ├── test-01_base_clusterer.R
+│       ├── test-02_kmeans_clusterer.R
+│       ├── test-03_mca_hclust_cluster.R
+│       ├── test-04_PDDP_clusterer.R
+│       └── ...
+├── vignettes/                  # Tutorials
+│   ├── divisive-clusterer.Rmd
+│   ├── kmeans-clusterer.Rmd
+│   └── ModalitiesDiceClusterer.Rmd
+└── README.md
+```
 
-Ce projet est sous licence MIT - voir le fichier [LICENSE](LICENSE) pour plus de détails.
+---
+
+## 👥 Authors
+
+**M2 SISE 2024-2025 Team:**
+
+- **Léo-Paul Knoepffler** ([@lp-knoepffler](https://github.com/lp-knoepffler))
+- **Olivier Borot** ([@OlivierBOROT](https://github.com/OlivierBOROT))
+- **Perrine Ibouroi** ([@PerrineIbouroi](https://github.com/perrineib))
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

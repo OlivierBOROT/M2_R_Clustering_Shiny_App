@@ -1,0 +1,516 @@
+---
+title: "Guide complet de ModalitiesDiceClusterer"
+subtitle: "Clustering de modalités par dissimilarité de Dice ou Cramér"
+author: "Olivier BOROT"
+date: "2025-12-01"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+    toc_depth: 3
+vignette: >
+  %\VignetteIndexEntry{Guide complet de ModalitiesDiceClusterer}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
+  fig.width = 10,
+  fig.height = 6,
+  fig.align = "center",
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Introduction
+
+Ce document démontre un use-case de la classe **ModalitiesDiceClusterer**, la classe R6 pour le clustering de modalités de variables catégorielles utilisant la classification hiérarchique avec les mesures de dissimilarité de Dice ou de Cramér.
+
+## Fonctionnalités principales
+
+- **Discrétisation automatique** des variables numériques
+- **Multiples mesures de dissimilarité** (Dice, V de Cramér)
+- **Classification hiérarchique** avec diverses méthodes de liaison
+- **Visualisation ACM** des modalités dans l'espace factoriel
+- **Analyse de silhouette** pour la sélection optimale du nombre de clusters
+- **Projection de variables illustratives** pour des insights prédictifs
+
+# Configuration
+
+```{r load-libraries}
+# Charger le package
+library(M2RClust)
+```
+
+# Cas d'usage 1 : Clustering de données catégorielles de base
+
+## Générer des données d'exemple
+
+Créons un jeu de données avec des informations clients incluant des variables catégorielles.
+
+```{r create-data-1}
+set.seed(42)
+
+# Créer un jeu de données clients
+n_customers <- 200
+
+customer_data <- data.frame(
+  genre = factor(sample(c("Homme", "Femme", "Autre"), n_customers, 
+                         replace = TRUE, prob = c(0.48, 0.48, 0.04))),
+  region = factor(sample(c("Nord", "Sud", "Est", "Ouest"), n_customers, 
+                         replace = TRUE)),
+  preference_produit = factor(sample(c("Electronique", "Vetements", "Alimentation", "Livres"), 
+                                     n_customers, replace = TRUE)),
+  niveau_fidelite = factor(sample(c("Bronze", "Argent", "Or", "Platine"), 
+                                n_customers, replace = TRUE, 
+                                prob = c(0.4, 0.3, 0.2, 0.1)))
+)
+
+# Afficher les premières lignes
+head(customer_data)
+
+# Statistiques descriptives
+summary(customer_data)
+```
+
+## Initialiser et ajuster le clusterer
+
+```{r fit-clusterer-1}
+# Créer un clusterer avec 4 groupes utilisant la dissimilarité de Dice
+clusterer <- ModalitiesDiceClusterer$new(
+  n_groups = 4,
+  linkage = "ward.D2",
+  dissimilarity = "dice",
+  auto_discretize = FALSE  # Données déjà catégorielles
+)
+
+# Ajuster le modèle
+clusterer$fit(customer_data)
+
+# Afficher les informations de base
+print(clusterer)
+```
+
+## Visualiser le dendrogramme
+
+```{r dendrogram-1, fig.height=7}
+# Tracer le dendrogramme hiérarchique
+clusterer$plot_dendrogram()
+```
+
+## Examiner les assignations de clusters
+
+```{r cluster-table-1}
+# Obtenir le tableau de clusters
+cluster_table <- clusterer$get_cluster_table()
+print(cluster_table)
+
+# Composition des clusters
+table(cluster_table$Cluster)
+```
+
+## Visualiser dans l'espace ACM
+
+```{r mca-plots-1}
+# Graphique ACM de base
+clusterer$plot_mca(show_labels = TRUE)
+
+# Coloré par cluster
+clusterer$plot_clusters(show_labels = TRUE, add_ellipses = TRUE)
+```
+
+## Déterminer le nombre optimal de clusters
+
+```{r silhouette-analysis-1, fig.height=6}
+# Analyse de silhouette pour trouver k optimal
+clusterer$plot_silhouette(min_k = 2, max_k = 8)
+```
+
+```{r silhouette-data-1}
+# Obtenir les données de silhouette détaillées
+sil_data <- clusterer$get_silhouette_data()
+head(sil_data)
+
+# Silhouette moyenne par cluster
+aggregate(Silhouette ~ Cluster, data = sil_data, FUN = mean)
+
+# Identifier les modalités mal classées
+poorly_clustered <- sil_data[sil_data$Silhouette < 0.2, ]
+if (nrow(poorly_clustered) > 0) {
+  cat("\nModalités avec de faibles scores de silhouette :\n")
+  print(poorly_clustered[order(poorly_clustered$Silhouette), ])
+}
+```
+
+## Recouper avec k optimal
+
+Sur la base de l'analyse de silhouette, ajustons le nombre de clusters.
+
+```{r recut-1}
+# Recouper au k optimal (ajuster selon le graphique de silhouette)
+optimal_k <- 3
+clusterer$cut_tree(optimal_k)
+
+# Visualiser le nouveau clustering
+clusterer$plot_clusters(show_labels = TRUE, add_ellipses = TRUE)
+
+# Obtenir la silhouette mise à jour
+sil_data_optimal <- clusterer$get_silhouette_data()
+cat(sprintf("\nSilhouette moyenne avec k=%d : %.4f\n", 
+            optimal_k, mean(sil_data_optimal$Silhouette)))
+```
+
+## Générer un résumé complet
+
+```{r}
+# Obtenir le résumé détaillé
+summary_results <- clusterer$summary()
+```
+
+# Cas d'usage 2 : Données mixtes avec auto-discrétisation
+
+## Générer un jeu de données mixte
+
+```{r create-data-2}
+set.seed(123)
+
+# Créer un jeu de données mixte avec des variables numériques et catégorielles
+n_obs <- 150
+
+mixed_data <- data.frame(
+  age = rnorm(n_obs, mean = 40, sd = 15),
+  revenu = rlnorm(n_obs, meanlog = 10.5, sdlog = 0.5),
+  education = factor(sample(c("Lycée", "Licence", "Master", "Doctorat"), 
+                            n_obs, replace = TRUE, 
+                            prob = c(0.3, 0.4, 0.2, 0.1))),
+  emploi = factor(sample(c("Temps plein", "Temps partiel", "Indépendant", "Sans emploi"), 
+                             n_obs, replace = TRUE)),
+  satisfaction = rnorm(n_obs, mean = 7, sd = 2)
+)
+
+# Afficher la structure
+str(mixed_data)
+summary(mixed_data)
+```
+
+## Ajuster avec auto-discrétisation
+
+```{r fit-clusterer-2}
+# Créer un clusterer avec auto-discrétisation activée
+clusterer2 <- ModalitiesDiceClusterer$new(
+  n_groups = 5,
+  linkage = "ward.D2",
+  dissimilarity = "dice",
+  auto_discretize = TRUE,
+  n_bins = 4  # Quartiles
+)
+
+# Ajuster le modèle
+clusterer2$fit(mixed_data)
+
+# Montrer comment les variables numériques ont été discrétisées
+cat("Structure des données discrétisées :\n")
+str(clusterer2$data)
+```
+
+## Analyser la qualité du clustering
+
+```{r analysis-2}
+# Analyse de silhouette
+clusterer2$plot_silhouette(min_k = 2, max_k = 8)
+
+# Obtenir les statistiques de cluster
+cluster_stats <- clusterer2$get_cluster_stats(n_dims = 2)
+print(cluster_stats)
+
+# Visualiser les clusters
+clusterer2$plot_clusters(add_ellipses = TRUE, show_labels = FALSE)
+```
+
+# Cas d'usage 3 : Projection de variable illustrative
+
+## Ajouter une variable illustrative
+
+```{r illustrative-3}
+# Créer une variable illustrative (non utilisée dans le clustering)
+set.seed(456)
+intention_achat <- factor(
+  sample(c("Faible", "Moyenne", "Élevée"), 
+         nrow(customer_data), 
+         replace = TRUE,
+         prob = c(0.3, 0.4, 0.3))
+)
+
+# Projeter la variable illustrative sur l'espace ACM
+clusterer$plot_with_illustrative(
+  illus = intention_achat,
+  show_labels = TRUE,
+  illus_color = "darkred"
+)
+```
+
+## Analyser les distances illustratives
+
+```{r illustrative-analysis}
+# Obtenir les données illustratives
+illus_data <- clusterer$get_illustrative_data(intention_achat, n_dims = 2)
+
+# Voir les modalités illustratives et leurs clusters les plus proches
+illus_modalities <- illus_data[illus_data$Type == "Illustrative", 
+                                c("Modality", "ClosestCluster", "DistToActive_Min")]
+print(illus_modalities)
+
+# Calculer les distances entre modalités illustratives et actives
+pred_results <- clusterer$predict_illustrative(intention_achat)
+
+# Distances moyennes par cluster
+cat("\nDistances moyennes des niveaux illustratifs à chaque cluster :\n")
+print(pred_results$by_group)
+```
+
+# Cas d'usage 4 : Comparaison des mesures de dissimilarité
+
+## Dice vs. V de Cramér
+
+```{r compare-dissimilarity}
+# Ajuster avec Dice
+clusterer_dice <- ModalitiesDiceClusterer$new(
+  n_groups = 4,
+  dissimilarity = "dice"
+)
+clusterer_dice$fit(customer_data)
+
+# Ajuster avec V de Cramér
+clusterer_cramer <- ModalitiesDiceClusterer$new(
+  n_groups = 4,
+  dissimilarity = "cramer"
+)
+clusterer_cramer$fit(customer_data)
+
+# Comparer les matrices de distance
+dice_mat <- clusterer_dice$get_dice_matrix()
+cramer_mat <- clusterer_cramer$get_dice_matrix()
+
+# Statistiques descriptives
+cat("Statistiques de dissimilarité de Dice :\n")
+cat(sprintf("  Étendue : [%.4f, %.4f]\n", min(dice_mat), max(dice_mat)))
+cat(sprintf("  Moyenne : %.4f\n", mean(dice_mat[upper.tri(dice_mat)])))
+
+cat("\nStatistiques de dissimilarité de Cramér :\n")
+cat(sprintf("  Étendue : [%.4f, %.4f]\n", min(cramer_mat), max(cramer_mat)))
+cat(sprintf("  Moyenne : %.4f\n", mean(cramer_mat[upper.tri(cramer_mat)])))
+
+# Comparer les clusterings
+cat("\nComparaison des assignations de clusters :\n")
+comparison_table <- table(
+  Dice = clusterer_dice$groups,
+  Cramer = clusterer_cramer$groups
+)
+print(comparison_table)
+```
+
+## Visualiser les deux méthodes
+
+```{r compare-visualization, fig.height=5}
+# Configurer les graphiques côte à côte
+par(mfrow = c(1, 2))
+
+# Clustering Dice
+clusterer_dice$plot_clusters(add_ellipses = TRUE, show_labels = FALSE)
+title(main = "Dissimilarité de Dice", line = 3)
+
+# Clustering Cramér
+clusterer_cramer$plot_clusters(add_ellipses = TRUE, show_labels = FALSE)
+title(main = "Dissimilarité V de Cramér", line = 3)
+
+par(mfrow = c(1, 1))
+```
+
+# Cas d'usage 5 : Export de données pour analyse externe
+
+## Extraire toutes les données
+
+```{r export-data}
+# Obtenir les coordonnées ACM
+mca_data <- clusterer$get_mca_data(n_dims = 5)
+head(mca_data)
+
+# Obtenir les données de cluster avec info de visualisation
+cluster_viz_data <- clusterer$get_cluster_data(n_dims = 3)
+head(cluster_viz_data)
+
+# Obtenir les statistiques de cluster
+cluster_stats <- clusterer$get_cluster_stats(n_dims = 2)
+print(cluster_stats)
+
+# Obtenir les données de silhouette
+silhouette_data <- clusterer$get_silhouette_data()
+head(silhouette_data)
+```
+
+## Exporter en CSV
+
+```{r export-csv, eval=FALSE}
+# Exporter pour des outils externes (Tableau, PowerBI, etc.)
+write.csv(mca_data, "coordonnees_acm.csv", row.names = FALSE)
+write.csv(cluster_viz_data, "visualisation_clusters.csv", row.names = FALSE)
+write.csv(cluster_stats, "statistiques_clusters.csv", row.names = FALSE)
+write.csv(silhouette_data, "analyse_silhouette.csv", row.names = FALSE)
+
+cat("Données exportées avec succès !\n")
+```
+
+# Cas d'usage 6 : Analyse avancée
+
+## Métriques de qualité des clusters
+
+```{r quality-metrics}
+# Obtenir les résultats du résumé
+summary_res <- clusterer$summary()
+
+# Décomposition de l'inertie
+inertia <- summary_res$inertia
+cat("\nDécomposition de l'inertie :\n")
+cat(sprintf("  Totale : %.4f\n", inertia["total"]))
+cat(sprintf("  Inter-clusters : %.4f (%.1f%%)\n", 
+            inertia["between"], 
+            100 * inertia["between"] / inertia["total"]))
+cat(sprintf("  Intra-clusters : %.4f (%.1f%%)\n", 
+            inertia["within"], 
+            100 * inertia["within"] / inertia["total"]))
+
+# Centres des clusters
+cat("\nCentres des clusters :\n")
+print(summary_res$group_centers)
+```
+
+## Contributions des modalités
+
+```{r modality-contributions}
+# Modalités les plus contributives
+contrib <- summary_res$modality_contribution
+top_contrib <- head(contrib[order(-contrib$Contribution), ], 10)
+
+cat("\nTop 10 des modalités par contribution à l'inertie totale :\n")
+print(top_contrib)
+
+# Visualiser les contributions
+barplot(top_contrib$Contribution,
+        names.arg = top_contrib$Modality,
+        las = 2,
+        main = "Contributions principales des modalités à l'inertie totale",
+        ylab = "Contribution",
+        col = "steelblue",
+        cex.names = 0.7)
+```
+
+## Analyse de la matrice de distance
+
+```{r distance-analysis}
+# Obtenir la matrice de distance
+dist_matrix <- clusterer$measure_dissimilarity()
+
+# Calculer le clustering hiérarchique avec différentes liaisons
+linkages <- c("ward.D2", "complete", "average", "single")
+
+par(mfrow = c(2, 2))
+for (link in linkages) {
+  hc <- hclust(as.dist(dist_matrix), method = link)
+  plot(hc, main = paste("Liaison :", link), xlab = "", sub = "")
+  rect.hclust(hc, k = 4, border = 2:5)
+}
+par(mfrow = c(1, 1))
+```
+
+# Cas d'usage 7 : Raffinement itératif des clusters
+
+## Tester plusieurs valeurs de k
+
+```{r test-k-values}
+# Tester différents nombres de clusters
+k_values <- 2:7
+results <- list()
+
+for (k in k_values) {
+  clusterer$cut_tree(k)
+  sil_data <- clusterer$get_silhouette_data()
+  
+  results[[as.character(k)]] <- list(
+    k = k,
+    avg_silhouette = mean(sil_data$Silhouette),
+    min_silhouette = min(sil_data$Silhouette),
+    n_negative = sum(sil_data$Silhouette < 0),
+    cluster_sizes = as.numeric(table(clusterer$groups))
+  )
+}
+
+# Créer un tableau de comparaison
+comparison_df <- data.frame(
+  k = k_values,
+  avg_silhouette = sapply(results, function(x) x$avg_silhouette),
+  min_silhouette = sapply(results, function(x) x$min_silhouette),
+  n_negative = sapply(results, function(x) x$n_negative)
+)
+
+print(comparison_df)
+
+# Tracer la comparaison
+plot(comparison_df$k, comparison_df$avg_silhouette,
+     type = "b", pch = 19, col = "steelblue",
+     xlab = "Nombre de clusters (k)",
+     ylab = "Silhouette moyenne",
+     main = "Qualité du clustering vs. Nombre de clusters",
+     lwd = 2)
+abline(h = 0, col = "red", lty = 2)
+grid()
+```
+
+## Sélectionner le meilleur k et finaliser
+
+```{r finalize}
+# Sélectionner k avec la silhouette moyenne la plus élevée
+best_k <- comparison_df$k[which.max(comparison_df$avg_silhouette)]
+cat(sprintf("\nMeilleur k basé sur la silhouette : %d\n", best_k))
+
+# Couper au meilleur k
+clusterer$cut_tree(best_k)
+
+# Visualisation finale
+clusterer$plot_clusters(show_labels = TRUE, add_ellipses = TRUE)
+
+# Résumé final
+final_summary <- clusterer$summary()
+```
+
+# Conclusion
+
+Ce document a démontré toutes les fonctionnalités de la classe **ModalitiesDiceClusterer** :
+
+1. **Clustering de base** de données catégorielles
+2. **Auto-discrétisation** pour les jeux de données mixtes numériques/catégoriels
+3. **Projection de variable illustrative** pour des insights prédictifs
+4. **Comparaison des mesures de dissimilarité** (Dice vs. V de Cramér)
+5. **Export de données** pour des outils externes
+6. **Métriques de qualité avancées** et diagnostics
+7. **Raffinement itératif** pour trouver le clustering optimal
+
+## Bonnes pratiques à retenir lors de l'utilisation de la classe :
+
+- Toujours effectuer une **analyse de silhouette** pour déterminer k optimal
+- Utiliser la **visualisation ACM** pour évaluer la séparation des clusters
+- Vérifier les **modalités mal classées** (silhouette négative)
+- Comparer **plusieurs méthodes de liaison** pour la robustesse
+- Exporter les résultats pour un **reporting reproductible**
+
+---
+
+Développement d'un package de clustering avec une application Shiny pour R - M2 SISE 2025-2026
+
+Auteurs contributeurs du projet :
+- Olivier BOROT
+- Perrine IBOUROI
+- Léo-Paul KNOEPFFLER
