@@ -32,6 +32,40 @@ build_cluster_stats <- function(clusters_df) {
 	do.call(rbind, stats_list)
 }
 
+compute_mca_elbow_curve <- function(model, min_k = 2L, max_k = 10L) {
+	if (is.null(model$hclust) || is.null(model$d2)) stop("Missing hierarchical clustering results.")
+	n_mod <- ncol(model$d2)
+	if (is.null(n_mod) || n_mod < 3) stop("Need at least 3 modalities for elbow diagnostics.")
+	max_allowed <- max(min_k, min(max_k, n_mod - 1L))
+	if (max_allowed < min_k) stop("No valid k values for elbow curve.")
+	k_values <- seq.int(min_k, max_allowed)
+	dist_matrix <- model$d2
+	hcl <- model$hclust
+	within_vals <- vapply(k_values, function(k) {
+		groups <- stats::cutree(hcl, k = k)
+		compute_within_inertia(dist_matrix, groups)
+	}, numeric(1))
+	if (any(is.na(within_vals))) stop("Unable to compute inertia values for elbow curve.")
+	list(k = k_values, within = within_vals)
+}
+
+compute_within_inertia <- function(d2_matrix, groups) {
+	if (is.null(d2_matrix) || length(groups) == 0) return(NA_real_)
+	groups <- groups[!is.na(groups)]
+	available <- intersect(names(groups), colnames(d2_matrix))
+	if (length(available) == 0) return(NA_real_)
+	groups <- groups[available]
+	cluster_ids <- sort(unique(groups))
+	total <- 0
+	for (cid in cluster_ids) {
+		mods <- available[groups == cid]
+		if (length(mods) <= 1) next
+		sub_mat <- d2_matrix[mods, mods, drop = FALSE]
+		total <- total + sum(sub_mat) / (2 * length(mods))
+	}
+	total
+}
+
 get_active_dataset <- function() {
 	shiny::isolate({
 		dataset <- data_store$dataset
@@ -367,12 +401,12 @@ get_method_specific_params <- function() {
 		"PDDP" = list(
 			n_clusters = input$CLUSTER_n_clusters %||% 3,
 			standardize = isTRUE(input$PDDP_standardize),
-			min_cluster_size = input$PDDP_min_cluster_size %||% 2,
+			min_cluster_size = input$PDDP_min_cluster_size %||% 3,
 			rotation_method = input$PDDP_rotation_method %||% "varimax",
 			promax_m = input$PDDP_promax_m %||% 4,
 			stop_at_kaiser = isTRUE(input$PDDP_stop_kaiser),
 			split_criterion = input$PDDP_split_criterion %||% "eigenvalue2",
-			min_eigenvalue_ratio = input$PDDP_min_eigen_ratio %||% 0.05
+			min_eigenvalue_ratio = input$PDDP_min_eigen_ratio %||% 0.1
 		),
 		"K-Means" = list(
 			n_clusters = input$CLUSTER_n_clusters %||% 3,
@@ -406,6 +440,9 @@ observeEvent(input$BUTTON_fit_cluster, {
 		run_pddp(method_params)
 	}
 
+#   cat(sprintf("Clustering triggered: %s with params %s\n",
+#               cluster_state$last_algorithm,
+#               paste(names(method_params), method_params, sep = "=", collapse = ", ")))
 })
 
 output$mca_hclust_results_panel <- shiny::renderUI({
@@ -610,7 +647,7 @@ output$mca_hclust_cluster_plot <- shiny::renderPlot({
 	res <- cluster_state$mca_results
 	req(res, res$model)
 	tryCatch({
-		res$model$plot_clusters(add_ellipses = TRUE)
+		res$model$plot_mca(color_by_cluster = TRUE, add_ellipses = TRUE)
 	}, error = function(err) {
 		graphics::plot.new()
 		graphics::text(0.5, 0.5, sprintf("Unable to render cluster map: %s", err$message))
@@ -672,7 +709,7 @@ output$mca_hclust_illustrative_plot <- shiny::renderPlot({
 	res <- cluster_state$mca_results
 	req(res, res$model)
 	tryCatch({
-		res$model$plot_with_illustrative(illus = illus_vec, show_labels = TRUE)
+		res$model$plot_mca_illustrative(illus = illus_vec, show_labels = TRUE)
 	}, error = function(err) {
 		graphics::plot.new()
 		graphics::text(0.5, 0.5, sprintf("Unable to render illustrative map: %s", err$message))

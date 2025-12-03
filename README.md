@@ -184,7 +184,7 @@ clusterer$fit(df)
 clusterer$get_cluster_table()
 
 # Visualiser en MCA
-clusterer$plot_clusters()
+clusterer$plot_mca(add_ellipses = TRUE)
 ```
 
 ## 📚 Documentation

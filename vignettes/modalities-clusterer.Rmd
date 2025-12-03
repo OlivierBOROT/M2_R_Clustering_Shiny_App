@@ -227,7 +227,7 @@ clusterer$plot_mca(show_labels = TRUE)
 ### Cluster Visualization
 
 ```{r cluster-plot, fig.cap="Modalities colored by cluster with confidence ellipses"}
-clusterer$plot_clusters(add_ellipses = TRUE)
+clusterer$plot_mca(add_ellipses = TRUE)
 ```
 
 ## Working with Mixed Data
@@ -325,7 +325,7 @@ print(round(illus_result$by_group, 3))
 ### Visualizing with Illustrative Variable
 
 ```{r plot-illustrative, fig.cap="MCA projection with illustrative variable"}
-clusterer$plot_with_illustrative(illus_var)
+clusterer$plot_mca_illustrative(illus_var)
 ```
 
 ## Extracting Data for Analysis

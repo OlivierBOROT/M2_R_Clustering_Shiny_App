@@ -1213,117 +1213,117 @@ test_that("plot_mca works with show_labels parameter", {
 })
 
 # =============================================================================
-# Tests for plot_clusters() method
+# Tests for plot_mca() method
 # =============================================================================
 
-test_that("plot_clusters fails before fit", {
+test_that("plot_mca fails before fit", {
   clusterer <- ModalitiesDiceClusterer$new()
 
   expect_error(
-    clusterer$plot_clusters(),
+    clusterer$plot_mca(),
     "Model not fitted. Call \\$fit\\(data\\) first"
   )
 })
 
-test_that("plot_clusters executes without error after fit", {
+test_that("plot_mca executes without error after fit", {
   set.seed(123)
   data <- create_sample_data(50)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
-  expect_silent(clusterer$plot_clusters())
+  expect_silent(clusterer$plot_mca())
 })
 
-test_that("plot_clusters returns self invisibly", {
+test_that("plot_mca returns self invisibly", {
   set.seed(123)
   data <- create_sample_data(50)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
-  result <- withVisible(clusterer$plot_clusters())
+  result <- withVisible(clusterer$plot_mca())
   expect_false(result$visible)
   expect_true(R6::is.R6(result$value))
 })
 
-test_that("plot_clusters accepts custom colors", {
+test_that("plot_mca accepts custom colors", {
   set.seed(123)
   data <- create_sample_data(50)
   clusterer <- ModalitiesDiceClusterer$new(n_groups = 3)
   clusterer$fit(data)
 
   custom_colors <- c("red", "blue", "green")
-  expect_silent(clusterer$plot_clusters(colors = custom_colors))
+  expect_silent(clusterer$plot_mca(colors = custom_colors))
 })
 
-test_that("plot_clusters works with add_ellipses parameter", {
+test_that("plot_mca works with add_ellipses parameter", {
   set.seed(123)
   data <- create_sample_data(50)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
-  expect_silent(clusterer$plot_clusters(add_ellipses = TRUE))
-  expect_silent(clusterer$plot_clusters(add_ellipses = FALSE))
+  expect_silent(clusterer$plot_mca(add_ellipses = TRUE))
+  expect_silent(clusterer$plot_mca(add_ellipses = FALSE))
 })
 
-test_that("plot_clusters validates dims parameter", {
+test_that("plot_mca validates dims parameter", {
   set.seed(123)
   data <- create_sample_data(50)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
   expect_error(
-    clusterer$plot_clusters(dims = 1),
+    clusterer$plot_mca(dims = 1),
     "dims must be a numeric vector of length 2"
   )
 })
 
 # =============================================================================
-# Tests for plot_with_illustrative() method
+# Tests for plot_mca_illustrative() method
 # =============================================================================
 
-test_that("plot_with_illustrative fails before fit", {
+test_that("plot_mca_illustrative fails before fit", {
   clusterer <- ModalitiesDiceClusterer$new()
   illus <- factor(c("A", "B", "A"))
 
   expect_error(
-    clusterer$plot_with_illustrative(illus),
+    clusterer$plot_mca_illustrative(illus),
     "Model not fitted. Call \\$fit\\(data\\) first"
   )
 })
 
-test_that("plot_with_illustrative works with factor input", {
+test_that("plot_mca_illustrative works with factor input", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
   illus <- factor(sample(c("Red", "Blue"), 100, replace = TRUE))
-  expect_silent(clusterer$plot_with_illustrative(illus))
+  expect_silent(clusterer$plot_mca_illustrative(illus))
 })
 
-test_that("plot_with_illustrative works with data.frame input", {
+test_that("plot_mca_illustrative works with data.frame input", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
   illus <- data.frame(color = factor(sample(c("Red", "Blue"), 100, replace = TRUE)))
-  expect_silent(clusterer$plot_with_illustrative(illus))
+  expect_silent(clusterer$plot_mca_illustrative(illus))
 })
 
-test_that("plot_with_illustrative returns self invisibly", {
+test_that("plot_mca_illustrative returns self invisibly", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
   illus <- factor(sample(c("A", "B"), 100, replace = TRUE))
-  result <- withVisible(clusterer$plot_with_illustrative(illus))
+  result <- withVisible(clusterer$plot_mca_illustrative(illus))
   expect_false(result$visible)
   expect_true(R6::is.R6(result$value))
 })
 
-test_that("plot_with_illustrative validates illustrative length", {
+test_that("plot_mca_illustrative validates illustrative length", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
@@ -1331,12 +1331,12 @@ test_that("plot_with_illustrative validates illustrative length", {
 
   illus <- factor(sample(c("A", "B"), 50, replace = TRUE)) # Wrong length
   expect_error(
-    clusterer$plot_with_illustrative(illus),
+    clusterer$plot_mca_illustrative(illus),
     "illus must have same length as fitted data"
   )
 })
 
-test_that("plot_with_illustrative fails with multi-column data.frame", {
+test_that("plot_mca_illustrative fails with multi-column data.frame", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
@@ -1347,19 +1347,19 @@ test_that("plot_with_illustrative fails with multi-column data.frame", {
     col2 = factor(sample(c("X", "Y"), 100, replace = TRUE))
   )
   expect_error(
-    clusterer$plot_with_illustrative(illus),
+    clusterer$plot_mca_illustrative(illus),
     "illus data.frame must have a single column"
   )
 })
 
-test_that("plot_with_illustrative accepts custom colors", {
+test_that("plot_mca_illustrative accepts custom colors", {
   set.seed(123)
   data <- create_sample_data(100)
   clusterer <- ModalitiesDiceClusterer$new()
   clusterer$fit(data)
 
   illus <- factor(sample(c("A", "B"), 100, replace = TRUE))
-  expect_silent(clusterer$plot_with_illustrative(illus, illus_color = "purple"))
+  expect_silent(clusterer$plot_mca_illustrative(illus, illus_color = "purple"))
 })
 
 # =============================================================================
@@ -1818,11 +1818,11 @@ test_that("all visualization methods work in sequence", {
 
   # Plot methods
   expect_silent(clusterer$plot_mca())
-  expect_silent(clusterer$plot_clusters())
+  expect_silent(clusterer$plot_mca())
 
   # Illustrative plot
   illus <- factor(sample(c("X", "Y"), 100, replace = TRUE))
-  expect_silent(clusterer$plot_with_illustrative(illus))
+  expect_silent(clusterer$plot_mca_illustrative(illus))
 })
 
 test_that("all data extraction methods work in sequence", {
@@ -1888,13 +1888,13 @@ test_that("illustrative projection works with different variable types", {
 
   # Binary illustrative
   illus_binary <- factor(sample(c("Yes", "No"), 100, replace = TRUE))
-  expect_silent(clusterer$plot_with_illustrative(illus_binary))
+  expect_silent(clusterer$plot_mca_illustrative(illus_binary))
   illus_data_binary <- clusterer$get_illustrative_data(illus_binary)
   expect_equal(sum(illus_data_binary$Type == "Illustrative"), 2)
 
   # Multi-level illustrative
   illus_multi <- factor(sample(c("Low", "Med", "High"), 100, replace = TRUE))
-  expect_silent(clusterer$plot_with_illustrative(illus_multi))
+  expect_silent(clusterer$plot_mca_illustrative(illus_multi))
   illus_data_multi <- clusterer$get_illustrative_data(illus_multi)
   expect_equal(sum(illus_data_multi$Type == "Illustrative"), 3)
 })
