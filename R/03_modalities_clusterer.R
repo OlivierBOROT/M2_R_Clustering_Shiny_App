@@ -92,7 +92,6 @@
  #'
  #' @examples
  #' \dontrun{
- #' source('CAH/new_CAH.R')
  #' df <- data.frame(A = factor(sample(c('a','b','c'), 200, TRUE)),
  #'                  B = factor(sample(c('x','y'), 200, TRUE)),
  #'                  C = rnorm(200))
@@ -605,14 +604,12 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #'   \item Strength of association between illustrative and active modalities
     #' }
     #' 
-    #' The assignment is based on the average distance to modalities in each cluster:
-    #' \deqn{D(s, C_k) = \frac{\sum_{j \in C_k} w_j \cdot d(s, j)}{\sum_{j \in C_k} w_j}}
-    #' where:
+    #' The assignment depends on the linkage method used for clustering:
     #' \itemize{
-    #'   \item \eqn{s} is the illustrative modality
-    #'   \item \eqn{C_k} is the set of active modalities in cluster \eqn{k}
-    #'   \item \eqn{d(s, j)} is the dissimilarity (Dice or Cramér) between \eqn{s} and \eqn{j}
-    #'   \item \eqn{w_j} is the weight (frequency) of active modality \eqn{j}
+    #'   \item "single": Minimum distance to any modality in the cluster
+    #'   \item "complete": Maximum distance to any modality in the cluster
+    #'   \item "average": Average distance to modalities in the cluster
+    #'   \item "ward.D2" (default): Weighted average distance (centroid-like)
     #' }
     #' 
     #' @param illus factor or one-column data.frame representing illustrative variable.
@@ -689,7 +686,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
         }
       }
 
-      # aggregate distances by modality group (mean distance per cluster)
+      # aggregate distances by modality group based on linkage method
       by_group <- matrix(0, nrow = self$n_groups, ncol = ncol(illus_disj))
       rownames(by_group) <- paste("Cluster", 1:self$n_groups)
       colnames(by_group) <- colnames(illus_disj)
@@ -697,10 +694,19 @@ ModalitiesDiceClusterer <- R6::R6Class(
       for (k in 1:self$n_groups) {
         cluster_modalities <- names(self$groups)[self$groups == k]
         for (j in seq_len(ncol(illus_disj))) {
-          # Weight by modality frequencies for more robust aggregation
-          weights <- self$modality_counts[cluster_modalities]
           distances <- dist_mat[cluster_modalities, j]
-          by_group[k, j] <- weighted.mean(distances, weights, na.rm = TRUE)
+          
+          if (self$linkage == "single") {
+            by_group[k, j] <- min(distances, na.rm = TRUE)
+          } else if (self$linkage == "complete") {
+            by_group[k, j] <- max(distances, na.rm = TRUE)
+          } else if (self$linkage == "average") {
+            by_group[k, j] <- mean(distances, na.rm = TRUE)
+          } else {
+            # Default (including Ward): weighted mean by frequency (centroid-like)
+            weights <- self$modality_counts[cluster_modalities]
+            by_group[k, j] <- weighted.mean(distances, weights, na.rm = TRUE)
+          }
         }
       }
       
@@ -1771,8 +1777,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
         for (nm in names(df_copy)[is_num]) {
           v <- df_copy[[nm]]
           # if binary 0/1, keep as is but coerce to factor
-          uniq <- unique(na.omit(v))
-         ;
+          uniq <- unique(na.omit(v));
           if (length(uniq) <= 2 && all(uniq %in% c(0,1))) {
             df_copy[[nm]] <- factor(ifelse(is.na(v), NA, v))
             next
@@ -1799,7 +1804,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
       n_mod <- ncol(dist_matrix)
       modalities <- colnames(dist_matrix)
       
-      # TOTAL INERTIA: Sum of all squared distances (ModClust approach)
+      # TOTAL INERTIA: Sum of all squared distances
       # Formula: I_total = sum(d^2) / (2 * n_mod)
       # This represents total dispersion in the distance space
       total_inertia <- sum(dist_matrix^2) / (2 * n_mod)
@@ -1821,7 +1826,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
           # Extract within-cluster distance sub-matrix
           cluster_indices <- which(colnames(dist_matrix) %in% cluster_modalities)
           dist_within <- dist_matrix[cluster_indices, cluster_indices]
-          # Sum of squared distances divided by 2*cluster_size (ModClust formula)
+          # Sum of squared distances divided by 2*cluster_size
           within_inertia_per_cluster[i] <- sum(dist_within^2) / (2 * n_k)
         } else {
           # Singleton cluster has zero within-cluster variance
