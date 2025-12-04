@@ -15,19 +15,24 @@ RoxygenNote: 7.3.3
 Imports:
     R6,
     PCAmixdata,
+    FactoMineR,
     cluster,
     shiny,
     shinydashboard,
     DT,
     readxl,
     igraph,
-    systemfonts
+    systemfonts,
+    markdown,
+    bslib,
+    glue,
+    readr
 Suggests:
     testthat (>= 3.0.0),
     knitr,
     rmarkdown,
     fmsb,
-    FactoMineR,
-    ggplot2
+    ggplot2,
+    car
 VignetteBuilder: knitr
 Config/testthat/edition: 3

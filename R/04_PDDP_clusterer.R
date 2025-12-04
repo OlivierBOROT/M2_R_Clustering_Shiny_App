@@ -1127,22 +1127,32 @@ DivisiveClusterer <- R6::R6Class(
         )
 
         eigenvalues <- pca_res$eig[, 1]
-
+        
         # === APPLY PCArot ROTATION (Critical Fix) ===
-        # PCArot performs Varimax rotation on PCAmix results
-        # This ensures the split is clean and interpretable (VARCLUS principle)
-        if (n_comp == 2 && self$rotation_method != "none") {
-          # PCArot implements Varimax for mixed data (standard for VARCLUS)
-          # Note: If promax is requested, we use varimax here since PCAmixdata::PCArot
-          # only supports varimax. Promax is primarily for numeric-only data.
-          pca_rotated <- PCAmixdata::PCArot(
-            pca_res,
-            dim = n_comp,
-            graph = FALSE
-          )
-          sqload_to_use <- pca_rotated$sqload
+        # Check if we actually have enough dimensions to rotate
+        can_rotate <- n_comp == 2 && 
+                      self$rotation_method != "none" && 
+                      nrow(pca_res$eig) >= 2
+
+        if (can_rotate) {
+          # PCArot implements Varimax for mixed data
+          pca_rotated <- tryCatch({
+            PCAmixdata::PCArot(
+              pca_res,
+              dim = n_comp,
+              graph = FALSE
+            )
+          }, error = function(e) {
+            return(NULL)
+          })
+          
+          if (!is.null(pca_rotated) && !is.null(pca_rotated$sqload)) {
+            sqload_to_use <- pca_rotated$sqload
+          } else {
+            sqload_to_use <- pca_res$sqload
+          }
         } else {
-          # Use unrotated squared loadings if rotation_method = "none" or only 1 component
+          # Use unrotated squared loadings
           sqload_to_use <- pca_res$sqload
         }
 

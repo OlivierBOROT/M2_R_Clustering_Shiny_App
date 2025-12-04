@@ -202,7 +202,7 @@ ModalitiesDiceClusterer <- R6::R6Class(
     #' 
     #' The disjunctive matrix represents each modality (factor level) as a binary column,
     #' where 1 indicates the modality is present for that observation and 0 indicates absence.
-    #' For example, a factor variable "color" with levels {red, blue, green} becomes
+    #' For example, a factor variable "color" with levels \{red, blue, green\} becomes
     #' three binary columns: color.red, color.blue, color.green.
     #' 
     #' @param data A data.frame or matrix containing the data to cluster. Each column

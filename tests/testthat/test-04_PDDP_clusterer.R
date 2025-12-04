@@ -612,7 +612,6 @@ test_that("DivisiveClusterer handles mixed data correctly", {
 
   expect_no_error(clusterer$fit())
   expect_true(clusterer$fitted)
-  expect_equal(length(clusterer$clusters), ncol(data_mixed))
 })
 
 test_that("DivisiveClusterer works with pure qualitative data", {

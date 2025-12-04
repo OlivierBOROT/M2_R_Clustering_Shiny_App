@@ -13,14 +13,14 @@ to allow chaining. \code{summary()} returns a list with \code{group_centers}, \c
 Comprehensive R6 class for clustering variable modalities using a Dice-style
 dissimilarity computed on a disjunctive (one-hot) representation of categorical
 data. This implementation includes features inspired by \code{HClustVar}: automatic
-discretization of numeric variables, optional Cramer's V dissimilarity, cached
+discretization of numeric variables, optional Cramér's V dissimilarity, cached
 group-level statistics (centers, inertia decomposition, modality contributions),
 and flexible hierarchical linkage and re-cutting.
 }
 \details{
 Each modality (variable level) is represented as a binary column in a
 disjunctive matrix. Dissimilarities between modalities are computed either
-using a Dice-based squared distance (default) or a Cramer's V-based measure
+using a Dice-based squared distance (default) or a Cramér's V-based measure
 transformed into a squared dissimilarity. After computing the modality-by-modality
 dissimilarity matrix, hierarchical clustering (\code{hclust}) is applied and
 modalities are assigned to \code{n_groups} clusters. The class also computes and
@@ -32,10 +32,10 @@ to support quick summaries and diagnostics.
 \describe{
 \item{n_groups}{Integer. Target number of modality groups (clusters).}
 \item{linkage}{Character. Linkage method passed to \code{hclust()} (e.g. \code{'ward.D2'}).}
-\item{dissimilarity}{Character. Dissimilarity measure used ('dice' or 'cramer').}
-\item{auto_discretize}{Logical. Whether numeric variables are automatically discretized.}
-\item{n_bins}{Integer. Number of bins for discretization.}
-\item{data}{Data.frame. The processed input data after discretization.}
+\item{dissimilarity}{Character. Dissimilarity measure used (\code{'dice'} or \code{'cramer'}).}
+\item{auto_discretize}{Logical. Whether to automatically discretize numeric variables.}
+\item{n_bins}{Integer. Number of bins for discretization when \code{auto_discretize = TRUE}.}
+\item{data}{data.frame. Processed input data (after discretization if applicable).}
 \item{disj}{Matrix. Disjunctive (one-hot) matrix of the input data (observations x modalities).}
 \item{d2}{Matrix. Squared-distance matrix between modalities (modalities x modalities).}
 \item{hclust}{Object. \code{stats::hclust()} result after clustering modalities.}
@@ -43,7 +43,7 @@ to support quick summaries and diagnostics.
 \item{fitted}{Logical. TRUE after successful \code{fit()}.}
 \item{modality_counts}{Numeric vector. Frequency (counts) for each modality.}
 \item{modality_relcontrib}{Numeric vector. Relative contribution of each modality to total inertia.}
-\item{group_centers}{Matrix. Center (mean profile) for each modality group.}
+\item{group_centers}{Matrix. Centroid coordinates for each cluster in MCA space.}
 }
 }
 
@@ -64,9 +64,8 @@ when \code{auto_discretize = TRUE}.}
 \item{measure_dissimilarity, measure_similarity}{Convenience accessors to the computed
 dissimilarity / similarity matrices.}
 \item{plot_dendrogram}{Plot hierarchical dendrogram with cluster rectangles.}
-\item{plot_mca}{Plot modalities in 2D MCA factorial space.}
-\item{plot_clusters}{Plot modalities colored by cluster with optional ellipses.}
-\item{plot_with_illustrative}{Plot modalities and illustrative variable in MCA space.}
+\item{plot_mca}{Plot modalities in 2D MCA factorial space (optionally colored by cluster).}
+\item{plot_mca_illustrative}{Plot modalities and illustrative variable in MCA space.}
 \item{get_mca_data}{Extract MCA coordinates as a data.frame for export/analysis.}
 \item{get_cluster_data}{Extract clustering visualization data with coordinates and assignments.}
 \item{get_illustrative_data}{Extract projection data for active and illustrative modalities.}
@@ -78,13 +77,10 @@ dissimilarity / similarity matrices.}
 
 \examples{
 \dontrun{
-source("CAH/new_CAH.R")
-df <- data.frame(
-  A = factor(sample(c("a", "b", "c"), 200, TRUE)),
-  B = factor(sample(c("x", "y"), 200, TRUE)),
-  C = rnorm(200)
-)
-m <- ModalitiesDiceClusterer$new(n_groups = 3, dissimilarity = "dice", auto_discretize = TRUE)
+df <- data.frame(A = factor(sample(c('a','b','c'), 200, TRUE)),
+                 B = factor(sample(c('x','y'), 200, TRUE)),
+                 C = rnorm(200))
+m <- ModalitiesDiceClusterer$new(n_groups = 3, dissimilarity = 'dice', auto_discretize = TRUE)
 m$fit(df)
 m$plot_dendrogram()
 print(m$get_cluster_table())
@@ -178,38 +174,6 @@ clusterer$plot_mca(dims = c(2, 3))
 }
 
 ## ------------------------------------------------
-## Method `ModalitiesDiceClusterer$plot_clusters`
-## ------------------------------------------------
-
-\dontrun{
-clusterer$fit(data)
-clusterer$plot_clusters()
-
-# Custom colors
-clusterer$plot_clusters(colors = c("red", "blue", "green"))
-
-# Without ellipses
-clusterer$plot_clusters(add_ellipses = FALSE)
-}
-
-## ------------------------------------------------
-## Method `ModalitiesDiceClusterer$plot_with_illustrative`
-## ------------------------------------------------
-
-\dontrun{
-clusterer$fit(data)
-
-# Project an illustrative variable
-illus_var <- factor(sample(c("Low", "High"), nrow(data), replace = TRUE))
-clusterer$plot_with_illustrative(illus_var)
-
-# Custom styling
-clusterer$plot_with_illustrative(illus_var,
-                                 illus_color = "purple",
-                                 show_labels = FALSE)
-}
-
-## ------------------------------------------------
 ## Method `ModalitiesDiceClusterer$get_mca_data`
 ## ------------------------------------------------
 
@@ -274,7 +238,7 @@ illus_data <- clusterer$get_illustrative_data(illus_var)
 illus_data[illus_data$Type == "Illustrative", ]
 
 # Find which cluster each illustrative level is closest to
-subset(illus_data, Type == "Illustrative",
+subset(illus_data, Type == "Illustrative", 
        select = c(Modality, ClosestCluster, DistToActive_Min))
 
 # Compute custom distances
@@ -354,31 +318,31 @@ aggregate(Silhouette ~ Cluster, data = sil_data, FUN = mean)
 \describe{
 \item{\code{n_groups}}{Integer. Target number of modality groups (clusters).}
 
-\item{\code{linkage}}{Character. Linkage method passed to \code{hclust()}.}
+\item{\code{linkage}}{Character. Linkage method for hierarchical clustering.}
 
-\item{\code{dissimilarity}}{Character. Dissimilarity measure used ('dice' or 'cramer').}
+\item{\code{dissimilarity}}{Character. Dissimilarity measure ('dice' or 'cramer').}
 
-\item{\code{auto_discretize}}{Logical. Whether numeric variables are automatically discretized.}
+\item{\code{auto_discretize}}{Logical. Whether to auto-discretize numeric variables.}
 
 \item{\code{n_bins}}{Integer. Number of bins for discretization.}
 
-\item{\code{data}}{Data.frame. The processed input data after discretization.}
+\item{\code{data}}{data.frame. Processed input data after discretization.}
 
-\item{\code{disj}}{Matrix. Disjunctive (one-hot) matrix of the input data.}
+\item{\code{disj}}{Matrix. Disjunctive (one-hot) matrix of modalities.}
 
 \item{\code{d2}}{Matrix. Squared-distance matrix between modalities.}
 
-\item{\code{hclust}}{Object. \code{stats::hclust()} result after clustering modalities.}
+\item{\code{hclust}}{Object. Hierarchical clustering result from stats::hclust().}
 
-\item{\code{groups}}{Integer vector. Named vector giving cluster id for each modality.}
+\item{\code{groups}}{Integer vector. Cluster assignments for each modality.}
 
-\item{\code{fitted}}{Logical. TRUE after successful \code{fit()}.}
+\item{\code{fitted}}{Logical. TRUE after successful fit().}
 
-\item{\code{modality_counts}}{Numeric vector. Frequency (counts) for each modality.}
+\item{\code{modality_counts}}{Numeric vector. Frequency of each modality.}
 
-\item{\code{modality_relcontrib}}{Numeric vector. Relative contribution of each modality to total inertia.}
+\item{\code{modality_relcontrib}}{Numeric vector. Relative contribution to total inertia.}
 
-\item{\code{group_centers}}{Matrix. Center (mean profile) for each modality group.}
+\item{\code{group_centers}}{Matrix. Centroid coordinates for each cluster.}
 }
 \if{html}{\out{</div>}}
 }
@@ -398,13 +362,13 @@ aggregate(Silhouette ~ Cluster, data = sil_data, FUN = mean)
 \item \href{#method-ModalitiesDiceClusterer-print}{\code{ModalitiesDiceClusterer$print()}}
 \item \href{#method-ModalitiesDiceClusterer-summary}{\code{ModalitiesDiceClusterer$summary()}}
 \item \href{#method-ModalitiesDiceClusterer-plot_mca}{\code{ModalitiesDiceClusterer$plot_mca()}}
-\item \href{#method-ModalitiesDiceClusterer-plot_clusters}{\code{ModalitiesDiceClusterer$plot_clusters()}}
-\item \href{#method-ModalitiesDiceClusterer-plot_with_illustrative}{\code{ModalitiesDiceClusterer$plot_with_illustrative()}}
+\item \href{#method-ModalitiesDiceClusterer-plot_mca_illustrative}{\code{ModalitiesDiceClusterer$plot_mca_illustrative()}}
 \item \href{#method-ModalitiesDiceClusterer-get_mca_data}{\code{ModalitiesDiceClusterer$get_mca_data()}}
 \item \href{#method-ModalitiesDiceClusterer-get_cluster_data}{\code{ModalitiesDiceClusterer$get_cluster_data()}}
 \item \href{#method-ModalitiesDiceClusterer-get_illustrative_data}{\code{ModalitiesDiceClusterer$get_illustrative_data()}}
 \item \href{#method-ModalitiesDiceClusterer-get_cluster_stats}{\code{ModalitiesDiceClusterer$get_cluster_stats()}}
 \item \href{#method-ModalitiesDiceClusterer-plot_silhouette}{\code{ModalitiesDiceClusterer$plot_silhouette()}}
+\item \href{#method-ModalitiesDiceClusterer-plot_elbow}{\code{ModalitiesDiceClusterer$plot_elbow()}}
 \item \href{#method-ModalitiesDiceClusterer-get_silhouette_data}{\code{ModalitiesDiceClusterer$get_silhouette_data()}}
 \item \href{#method-ModalitiesDiceClusterer-clone}{\code{ModalitiesDiceClusterer$clone()}}
 }
@@ -418,7 +382,7 @@ Create a new ModalitiesDiceClusterer
 \if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$new(
   n_groups = 3,
   linkage = "ward.D2",
-  dissimilarity = c("dice", "cramer"),
+  dissimilarity = "dice",
   auto_discretize = TRUE,
   n_bins = 4
 )}\if{html}{\out{</div>}}
@@ -437,14 +401,14 @@ clustering. Must be one of:
 \item "single": Single linkage (nearest neighbor)
 \item "complete": Complete linkage (furthest neighbor)
 \item "average": Average linkage (UPGMA)
-\item "ward.D": Ward's method with d instead of d2
+\item "ward.D": Ward's method with d instead of d²
 }}
 
 \item{\code{dissimilarity}}{Character. The dissimilarity measure between modalities.
 Must be one of:
 \itemize{
 \item "dice" (default): Dice dissimilarity based on binary vectors
-\item "cramer": Cramer's V association measure transformed to dissimilarity
+\item "cramer": Cramér's V association measure transformed to dissimilarity
 }}
 
 \item{\code{auto_discretize}}{Logical. If TRUE, numeric columns in the input data
@@ -528,8 +492,8 @@ The fitted ModalitiesDiceClusterer object (invisible for chaining).
 The object's fields are updated with clustering results:
 \itemize{
 \item data: Processed data (after discretization if applicable)
-\item disj: Disjunctive matrix (observations x modalities)
-\item d2: Squared dissimilarity matrix (modalities x modalities)
+\item disj: Disjunctive matrix (observations × modalities)
+\item d2: Squared dissimilarity matrix (modalities × modalities)
 \item hclust: Hierarchical clustering result
 \item groups: Cluster assignments for each modality
 \item modality_counts: Frequency of each modality
@@ -580,7 +544,7 @@ is easier for inspection and custom analyses.}
 \subsection{Details}{
 Extracts the dissimilarity matrix computed during the fit() process.
 The matrix contains pairwise distances between all modalities (factor levels).
-Distances are computed using either Dice dissimilarity or Cramer's V,
+Distances are computed using either Dice dissimilarity or Cramér's V,
 depending on the dissimilarity parameter set during initialization.
 
 The returned matrix is symmetric with zeros on the diagonal (each modality
@@ -589,7 +553,7 @@ modalities are in terms of their co-occurrence patterns across observations.
 }
 
 \subsection{Returns}{
-Either a numeric matrix (modalities x modalities) or a dist object,
+Either a numeric matrix (modalities × modalities) or a dist object,
 depending on the as_dist parameter. Matrix elements represent dissimilarities:
 smaller values indicate more similar modalities.
 }
@@ -705,12 +669,9 @@ Return dissimilarity matrix between modalities (Dice)
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{as_dist}}{Logical. If TRUE, returns a dist object. Default is FALSE.}
+\item{\code{as_dist}}{Logical. If TRUE, returns a dist object; otherwise returns a matrix.}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Dissimilarity matrix or dist object
 }
 }
 \if{html}{\out{<hr>}}
@@ -725,12 +686,9 @@ Return similarity matrix derived from dissimilarity
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{normalize}}{Logical. If TRUE, normalizes to [0,1] range. Default is TRUE.}
+\item{\code{normalize}}{Logical. If TRUE, normalizes similarity to [0,1] range.}
 }
 \if{html}{\out{</div>}}
-}
-\subsection{Returns}{
-Similarity matrix
 }
 }
 \if{html}{\out{<hr>}}
@@ -745,12 +703,33 @@ Compute distances from modalities to an illustrative variable
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{illus}}{factor or one-column data.frame representing illustrative variable}
+\item{\code{illus}}{factor or one-column data.frame representing illustrative variable.
+Must have same length as the original fitted data.}
 }
 \if{html}{\out{</div>}}
 }
+\subsection{Details}{
+Projects an illustrative (supplementary) variable into the modality space
+and computes distances to existing modality clusters. This helps understand:
+\itemize{
+\item Which clusters are most similar to the illustrative variable
+\item How the illustrative variable would cluster with active variables
+\item Strength of association between illustrative and active modalities
+}
+
+The assignment depends on the linkage method used for clustering:
+\itemize{
+\item "single": Minimum distance to any modality in the cluster
+\item "complete": Maximum distance to any modality in the cluster
+\item "average": Average distance to modalities in the cluster
+\item "ward.D2" (default): Weighted average distance (centroid-like)
+}
+}
+
 \subsection{Returns}{
-list with \code{distances} (vector per modality) and \code{by_group} (mean per modality group)
+list with \code{distances} (matrix: modalities × illustrative levels),
+\code{by_group} (matrix: clusters × illustrative levels), and \code{assignment}
+(vector: which cluster each illustrative level is closest to)
 }
 }
 \if{html}{\out{<hr>}}
@@ -767,46 +746,39 @@ Plot dendrogram of modalities
 \if{html}{\out{<a id="method-ModalitiesDiceClusterer-print"></a>}}
 \if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-print}{}}}
 \subsection{Method \code{print()}}{
-Print method for the clusterer
+Print method for ModalitiesDiceClusterer
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$print()}\if{html}{\out{</div>}}
 }
 
-\subsection{Returns}{
-The ModalitiesDiceClusterer object (invisible)
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ModalitiesDiceClusterer-summary"></a>}}
 \if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-summary}{}}}
 \subsection{Method \code{summary()}}{
-Generate comprehensive summary statistics
+Generate comprehensive clustering summary
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$summary()}\if{html}{\out{</div>}}
 }
 
-\subsection{Details}{
-Prints a detailed summary including model configuration, data information,
-cluster assignments, inertia decomposition, modality contributions, distance
-statistics, and hierarchical clustering details.
-}
-
-\subsection{Returns}{
-A list containing group_centers, inertia, modality_contribution,
-and modality_relcontrib (returned invisibly)
-}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ModalitiesDiceClusterer-plot_mca"></a>}}
 \if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_mca}{}}}
 \subsection{Method \code{plot_mca()}}{
 Plot modalities in 2D MCA space
+
+
+Plot modalities in MCA space (optionally colored by cluster)
 \subsection{Usage}{
 \if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_mca(
   dims = c(1, 2),
+  color_by_cluster = TRUE,
   point_size = 3,
   label_size = 3,
-  show_labels = TRUE
+  show_labels = TRUE,
+  add_ellipses = TRUE,
+  colors = NULL
 )}\if{html}{\out{</div>}}
 }
 
@@ -817,12 +789,18 @@ Plot modalities in 2D MCA space
 Default is c(1, 2) for the first two dimensions (explaining most variance).
 Can be changed to explore other dimension pairs, e.g., c(1, 3) or c(2, 3).}
 
+\item{\code{color_by_cluster}}{Logical. If TRUE, colors points by cluster assignment.}
+
 \item{\code{point_size}}{Numeric. Size of the points. Default is 3.}
 
 \item{\code{label_size}}{Numeric. Size of the modality labels. Default is 3.}
 
 \item{\code{show_labels}}{Logical. If TRUE (default), displays modality names next
 to points. Set to FALSE for cleaner plots with many modalities.}
+
+\item{\code{add_ellipses}}{Logical. If TRUE, draws confidence ellipses around clusters.}
+
+\item{\code{colors}}{Character vector. Custom colors for clusters (optional).}
 }
 \if{html}{\out{</div>}}
 }
@@ -864,158 +842,35 @@ clusterer$plot_mca(dims = c(2, 3))
 
 }
 \if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ModalitiesDiceClusterer-plot_clusters"></a>}}
-\if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_clusters}{}}}
-\subsection{Method \code{plot_clusters()}}{
-Plot modalities colored by cluster assignment
+\if{html}{\out{<a id="method-ModalitiesDiceClusterer-plot_mca_illustrative"></a>}}
+\if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_mca_illustrative}{}}}
+\subsection{Method \code{plot_mca_illustrative()}}{
+Plot MCA with illustrative variable projection
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_clusters(
-  dims = c(1, 2),
-  point_size = 3,
-  label_size = 3,
-  show_labels = TRUE,
-  colors = NULL,
-  add_ellipses = TRUE
-)}\if{html}{\out{</div>}}
-}
-
-\subsection{Arguments}{
-\if{html}{\out{<div class="arguments">}}
-\describe{
-\item{\code{dims}}{Integer vector of length 2. Which factorial dimensions to plot.
-Default is c(1, 2).}
-
-\item{\code{point_size}}{Numeric. Size of the points. Default is 3.}
-
-\item{\code{label_size}}{Numeric. Size of the modality labels. Default is 3.}
-
-\item{\code{show_labels}}{Logical. If TRUE (default), displays modality names.}
-
-\item{\code{colors}}{Character vector. Custom colors for clusters. If NULL,
-uses a default color palette. Length should match number of clusters.}
-
-\item{\code{add_ellipses}}{Logical. If TRUE (default), adds confidence ellipses
-around each cluster to visualize cluster boundaries.}
-}
-\if{html}{\out{</div>}}
-}
-\subsection{Details}{
-Projects modalities into 2D MCA space and colors them according to their
-cluster assignments. This visualization helps assess:
-\itemize{
-\item Cluster separation: Are clusters spatially distinct?
-\item Cluster cohesion: Are modalities within a cluster close together?
-\item Clustering quality: Does the clustering match the natural structure?
-\item Potential outliers or misclassifications
-}
-
-Well-separated clusters in the MCA space indicate good clustering quality.
-Overlapping clusters may suggest the need for fewer groups or different
-linkage methods.
-}
-
-\subsection{Returns}{
-The ModalitiesDiceClusterer object (invisible for chaining).
-A plot is displayed with modalities colored by cluster.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-clusterer$fit(data)
-clusterer$plot_clusters()
-
-# Custom colors
-clusterer$plot_clusters(colors = c("red", "blue", "green"))
-
-# Without ellipses
-clusterer$plot_clusters(add_ellipses = FALSE)
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
-}
-\if{html}{\out{<hr>}}
-\if{html}{\out{<a id="method-ModalitiesDiceClusterer-plot_with_illustrative"></a>}}
-\if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_with_illustrative}{}}}
-\subsection{Method \code{plot_with_illustrative()}}{
-Plot modalities with illustrative variable projection
-\subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_with_illustrative(
+\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_mca_illustrative(
   illus,
   dims = c(1, 2),
   point_size = 3,
   label_size = 3,
-  show_labels = TRUE,
-  colors = NULL,
-  illus_color = "red"
+  show_labels = TRUE
 )}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{illus}}{Factor or one-column data.frame. The illustrative variable
-to project onto the MCA space. Must have the same number of observations
-as the original fitted data.}
+\item{\code{illus}}{Factor or data.frame. Illustrative variable to project.}
 
-\item{\code{dims}}{Integer vector of length 2. Which factorial dimensions to plot.
-Default is c(1, 2).}
+\item{\code{dims}}{Integer vector of length 2. Dimensions to plot (default c(1,2)).}
 
-\item{\code{point_size}}{Numeric. Size of the points. Default is 3.}
+\item{\code{point_size}}{Numeric. Size of points (default 3).}
 
-\item{\code{label_size}}{Numeric. Size of the labels. Default is 3.}
+\item{\code{label_size}}{Numeric. Size of labels (default 3).}
 
-\item{\code{show_labels}}{Logical. If TRUE (default), displays modality names.}
-
-\item{\code{colors}}{Character vector. Custom colors for clusters. If NULL,
-uses default palette.}
-
-\item{\code{illus_color}}{Character. Color for illustrative variable points.
-Default is "red".}
+\item{\code{show_labels}}{Logical. Whether to show modality labels (default TRUE).}
 }
 \if{html}{\out{</div>}}
 }
-\subsection{Details}{
-Projects both the clustered modalities and an illustrative (supplementary)
-variable into the same 2D MCA space. This helps understand:
-\itemize{
-\item How the illustrative variable relates to existing clusters
-\item Which clusters the illustrative modalities are closest to
-\item Predictive relationships between variables
-\item Whether the illustrative variable would cluster similarly
-}
-
-The illustrative variable is projected passively (without affecting the
-MCA solution) and shown with different symbols (triangles) to distinguish
-from the active modalities (circles).
-}
-
-\subsection{Returns}{
-The ModalitiesDiceClusterer object (invisible for chaining).
-A plot is displayed with both clustered modalities and illustrative
-variable projections.
-}
-\subsection{Examples}{
-\if{html}{\out{<div class="r example copy">}}
-\preformatted{\dontrun{
-clusterer$fit(data)
-
-# Project an illustrative variable
-illus_var <- factor(sample(c("Low", "High"), nrow(data), replace = TRUE))
-clusterer$plot_with_illustrative(illus_var)
-
-# Custom styling
-clusterer$plot_with_illustrative(illus_var,
-                                 illus_color = "purple",
-                                 show_labels = FALSE)
-}
-}
-\if{html}{\out{</div>}}
-
-}
-
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ModalitiesDiceClusterer-get_mca_data"></a>}}
@@ -1103,7 +958,7 @@ more dimensions for analysis.}
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-Extracts the complete data behind the plot_clusters() visualization,
+Extracts the complete data behind the plot_mca() visualization (when colored by cluster),
 including MCA coordinates, cluster assignments, and variance explained.
 This combines information from multiple sources:
 \itemize{
@@ -1177,7 +1032,7 @@ to project. Must have the same length as the fitted data.}
 \if{html}{\out{</div>}}
 }
 \subsection{Details}{
-Extracts the complete data behind the plot_with_illustrative() visualization,
+Extracts the complete data behind the plot_mca_illustrative() visualization,
 including both active (clustered) modalities and illustrative (supplementary)
 modalities projected into the same MCA space.
 
@@ -1221,7 +1076,7 @@ illus_data <- clusterer$get_illustrative_data(illus_var)
 illus_data[illus_data$Type == "Illustrative", ]
 
 # Find which cluster each illustrative level is closest to
-subset(illus_data, Type == "Illustrative",
+subset(illus_data, Type == "Illustrative", 
        select = c(Modality, ClosestCluster, DistToActive_Min))
 
 # Compute custom distances
@@ -1318,15 +1173,11 @@ stats[order(-stats$QualityScore), ]
 \if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_silhouette}{}}}
 \subsection{Method \code{plot_silhouette()}}{
 Plot average silhouette scores across different k values (elbow plot)
+
+
+Plot Average Silhouette vs K (to find optimal k)
 \subsection{Usage}{
-\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_silhouette(
-  min_k = 2,
-  max_k = 10,
-  line_color = "steelblue",
-  point_color = "steelblue",
-  optimal_color = "red",
-  mark_optimal = TRUE
-)}\if{html}{\out{</div>}}
+\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_silhouette(min_k = 2, max_k = 10)}\if{html}{\out{</div>}}
 }
 
 \subsection{Arguments}{
@@ -1403,6 +1254,25 @@ clusterer$plot_silhouette(mark_optimal = FALSE)
 
 }
 
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-ModalitiesDiceClusterer-plot_elbow"></a>}}
+\if{latex}{\out{\hypertarget{method-ModalitiesDiceClusterer-plot_elbow}{}}}
+\subsection{Method \code{plot_elbow()}}{
+Plot Within-Inertia vs K (Elbow Method)
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{ModalitiesDiceClusterer$plot_elbow(min_k = 1, max_k = 10)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{min_k}}{Integer. Minimum number of clusters to test (default 1).}
+
+\item{\code{max_k}}{Integer. Maximum number of clusters to test (default 10).}
+}
+\if{html}{\out{</div>}}
+}
 }
 \if{html}{\out{<hr>}}
 \if{html}{\out{<a id="method-ModalitiesDiceClusterer-get_silhouette_data"></a>}}
